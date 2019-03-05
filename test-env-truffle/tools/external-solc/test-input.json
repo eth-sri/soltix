@@ -1,0 +1,29 @@
+{
+    "language": "Solidity",
+    "sources": {
+        "./c.sol": {
+            "content": "contract c {\n    function f() public\n    {\n            return;\n    }\n}\n"
+        }
+    },
+    "settings": {
+        "optimizer": {
+            "enabled": false,
+            "runs": 200
+        },
+        "outputSelection": {
+            "*": {
+                "": [
+                    "legacyAST",
+                    "ast"
+                ],
+                "*": [
+                    "abi",
+                    "evm.bytecode.object",
+                    "evm.bytecode.sourceMap",
+                    "evm.deployedBytecode.object",
+                    "evm.deployedBytecode.sourceMap"
+                ]
+            }
+        }
+    }
+}

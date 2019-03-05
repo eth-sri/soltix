@@ -1,0 +1,11 @@
+{
+  "name": "test-env-truffle",
+  "version": "1.0.0",
+  "description": "solc test framework",
+  "author": "Nils Weller",
+  "license": "MIT",
+  "dependencies": {
+    "ganache-cli": "^6.3.0",
+    "truffle": "^5.0.3"
+  }
+}
