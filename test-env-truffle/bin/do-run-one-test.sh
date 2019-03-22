@@ -37,18 +37,22 @@ fi
 
 usage() {
 	# TODO Fix messy mode selection
-	echo run-one-test.sh "[path-to-contract-file.sol | path-to-contract-dir] [mutations-count | c0]" 
+	echo run-one-test.sh "[path-to-contract-file.sol | path-to-contract-dir] [mutations-count | c0 | optimize=<runs>[,yul|,standard]]" 
 	echo
 	echo "With Live EMI mutations:"
 	echo "1. If a mutations count is given, we apply Live Code Mutation with the given number of repetitions"
-	echo "   run-one-test.sh [path-to-contract.sol] [mutations-count]"
+	echo "       run-one-test.sh [path-to-contract.sol] [mutations-count]"
 	echo "2. If, additionally, the --generated argument is given, the input is expected to be a directory containing"
 	echo "   contract c0.tx and the construction and tx files"
-	echo "   run-one-test.sh [generated-contract-dir] [mutations-count] --generated"
+	echo "       run-one-test.sh [generated-contract-dir] [mutations-count] --generated"
 	echo
 	echo "Without mutations:"
-	echo "1. If c0 is specified, we assume generated contract execution (no instrumentation, no mutations)"
-	echo "   run-one-test.sh [path-to-contract-dir] c0"
+	echo "1. If 'c0' is specified, we assume generated contract execution (no instrumentation, no mutations)"
+	echo "       run-one-test.sh [path-to-contract-dir] c0"
+	echo "2. If 'optimize' is specified, we perform Different Optimization Levels testing - comparing unoptimized"
+	echo "   compilation against optimized compilation with the specified settings."
+	echo "       run-one-test.sh [path-to-contract-dir] optimize=200,standard   - when optimizing, use 200 runs and standard optimizer"
+	echo "       run-one-test.sh [path-to-contract-dir] optimize=1000,yul  - use 1000 runs and experimental yul optimizer"
 	exit 1
 }
 
@@ -58,9 +62,50 @@ if test "$#" != 2; then
 fi
 
 if test "$2" = c0; then
+	# TODO c0 mode obsolete?
 	RUN_SINGLE_CONTRACT_FILE=c0.sol
 else
+	# TODO Fix mutations count/optimization overloading
 	MUTATIONS_COUNT=$2
+
+	case $MUTATIONS_COUNT in
+		# Optimization?
+		optimize*)
+			if test "$USE_SOLCJS" = yes; then
+				# TODO Fix this. Due to lack of yul
+				echo Error: Optimization testing with yul is currently unsupported for solcjs - change USE_SOLCJS in settings.cfg.sh to use solc
+				exit 1
+			fi
+
+			# Separate optimize and options in optimize=options
+			OPTIMIZATION_ARGS=`echo $MUTATIONS_COUNT | awk -F= '{print $2}'`
+			MUTATIONS_COUNT=`echo $MUTATIONS_COUNT | awk -F= '{print $1}'`
+			if test "$MUTATIONS_COUNT" != optimize || test "$OPTIMIZATION_ARGS" = ""; then
+				echo Error: Invalid format for optimize option
+				usage
+			fi
+			# Separate runs,optimizer in options
+			OPTIMIZATION_RUNS=`echo $OPTIMIZATION_ARGS | awk -F, '{print $1}'`
+			OPTIMIZER_TYPE=`echo $OPTIMIZATION_ARGS | awk -F, '{print $2}'`
+			case $OPTIMIZATION_RUNS in
+				''|*[!0-9]*)
+				echo Error: Invalid optimization runs argument - not a number
+				usage
+			esac
+			if test "$OPTIMIZER_TYPE" != standard && test "$OPTIMIZER_TYPE" != yul; then
+				echo Error: Unknown optimizer type $OPTIMIZER_TYPE
+				usage
+			fi
+
+
+			;;
+		# Mutation - must be number
+		''|*[!0-9]*)
+			echo Error: Invalid mutation/optimization setting
+			usage
+			;;
+		*) ;;
+	esac
 fi
 
 if test -d "$1" &&  test -f "$1"/c0.sol; then
@@ -401,9 +446,17 @@ run_contract() {
 debug =============================  Processing original contract =================================
 printf "O... " >>/dev/tty # Always show this even if invoked (e.g. from run-all-tests.sh) with redirection
 
+
 if test "$MUTATIONS_COUNT" = optimize; then # TODO pass flag properly
 	# Run original contract with optimization disabled
-	truffle-optimization-setting.sh off
+	export OVERRIDE_USE_SOLC_OPTIMIZATION=no
+	# ... but still pass a "runs" settings, because the optimization switch only disables some 
+	# optimizations, while others are always applied. 0 runs should hopefully disable most of that
+	# as well
+	export OVERRIDE_SOLC_OPTIMIZATION_RUNS=0  #$OPTIMIZATION_RUNS
+	# Note: We are NOT passing the yul setting here, so if there are still default optimizations
+	# happening, they will use the standard optimizer. Comparing standard vs yul at high levels
+	# could be a desirable etra mode	
 fi
 
 
@@ -448,23 +501,26 @@ elif test "$MUTATIONS_COUNT" = optimize; then # TODO pass flag properly
 	# then manually vary to lower levels
 	
 	debug =============================  Processing optimized - 0 runs - contract =================================
-	truffle-optimization-setting.sh on
+#	truffle-optimization-setting.sh on
 
+
+	# TODO pass flags properly
+	export OVERRIDE_USE_SOLC_OPTIMIZATION=yes
+	export OVERRIDE_SOLC_OPTIMIZATION_RUNS=$OPTIMIZATION_RUNS
+	# TODO enable yul support for solcjs as well
+	if test "$OPTIMIZER_TYPE" = yul; then
+		export OVERRIDE_SOLC_USE_YUL_OPTIMIZER=yes
+	else
+		export OVERRIDE_SOLC_USE_YUL_OPTIMIZER=no
+	fi
+
+	printf "OPT... " >>/dev/tty # Always show this even if invoked (e.g. from run-all-tests.sh) with redirection
 	run_contract optimized0
-
-	# Restore to off (note: this is not done if run_contract fails! but it's not essential)
-	truffle-optimization-setting.sh off
 
 	verify_result_equivalence "original" "optimized0"
 
 	exit 0
 
-	#debug =============================  Processing optimized - 0 runs - contract =================================
-	#./truffle-optimization-setting.sh on 0
-	#run_contract optimized0
-	#debug =============================  Processing optimized - 0 runs - contract =================================
-	#./truffle-optimization-setting.sh on 200
-	#run_contract optimized200
 fi
 
 

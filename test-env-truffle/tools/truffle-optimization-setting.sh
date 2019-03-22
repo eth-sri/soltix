@@ -32,8 +32,8 @@ OPT_SETTINGS_FILE="_opt.txt"
 
 usage() {
 	echo "Usage: truffle-optimization.setting.sh [print(opt)] [on|off] [runs-level(opt)]" 
-	echo "       Edits node_nodules/bin/.truffle optimization settings.
-	echo "       off                      - disable
+	echo "       Edits node_nodules/bin/.truffle optimization settings."
+	echo "       off                      - disable"
 	echo "       on [runs-level]          - enable at specified runs level"
 	echo "       off/on with print option - do not perform changes, only print them to $OPT_SETTINGS_FILE" 
 	exit 1
@@ -114,6 +114,10 @@ CURRENT_SETTING=`get_current_setting`
 if test "$DESIRED_SETTING" = on; then
 	CURRENT_RUNS=`get_current_runs`
 fi
+
+
+
+
 
 if test "$CURRENT_SETTING" = "$DESIRED_SETTING"; then
 	if test "$DESIRED_SETTING" = on && test "$CURRENT_RUNS" != "$DESIRED_RUNS"; then

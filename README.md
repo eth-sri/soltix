@@ -132,7 +132,7 @@ directory.
 
 ## Build
 
-To build and configure the ECTF software, execute the interactive setup 
+To build and configure the SOLTIX software, execute the interactive setup 
 script and answer its questions:
 
         ./setup.sh
@@ -342,13 +342,27 @@ mutations to 4 as well). For complete contracts, an additional instrumentation s
 is executed to obtain variable environment state and create mutated programs.
 
 
-##### Different Optimization Testing 
+##### Different Optimization Levels testing 
 
 Instead of specifying a mutations count, it is also possible to pass the argument
 "optimize" in order to compare the results for a single contract once compiled with
-and once without optimization enabled:
+and once without optimization enabled. The "optimize" option requires two additional
+arguments:
 
-        ./test-env-truffle/bin/run-one-test.sh x.sol optimize
+1. The number of optimization runs must be specified
+2. The optimizer to use must be specified: "standard" or "yul" (an experimental new optimizer)
+
+
+
+Example: Compare unoptimized compilation against optimized compilations with 100 runs
+and using the yul optimizer:
+
+        ./test-env-truffle/bin/run-one-test.sh x.sol optimize=100,yul
+
+5000 using the standard optimizer:
+
+        ./test-env-truffle/bin/run-one-test.sh x.sol optimize=5000,standard
+
 
 #### Executing a set of contracts
 
@@ -416,7 +430,7 @@ includes expressions and control structures, but is missing various types and
 operations, as well as more advanced contract structures like modifiers or
 inheritance, and Ethereum-specific functionality like value transfer.
 
-All components - ECTF, solc and truffle - exhibit performance issues for contracts
+All components - SOLTIX, solc and truffle - exhibit performance issues for contracts
 exceeding a few 100 or 1000 lines, and may fail completely. Experimentation is
 needed to find sensible upper limits on a given system.
 
@@ -434,9 +448,9 @@ process
 This section gives an overview to some of the workings of the framework. The system
 is composed of three categories of components:
 
-1. The ECTF application to generate code
+1. The SOLTIX application to generate code
 2. Third-party software: solc as a test object, truffle/ganache-cli as an execution backend
-3. Shell scripts (described in the [use](#use) section above) to invoke the ECTF and third-party
+3. Shell scripts (described in the [use](#use) section above) to invoke the SOLTIX and third-party
 components, and drive result evaluation
 
 
@@ -517,10 +531,10 @@ allocation (e.g. registers in traditional computer architectures).
 The semantically-equivalent mutations are based on the ideas described in
 ["Finding  Compiler  Bugs  via  Live  Code  Mutation" (Sun et al., 2014)](http://web.cs.ucdavis.edu/~su/publications/oopsla16.pdf),
 with various adaptations. They motivate the development of significant infrastructure to
-profile smart contract execution (in the "profiling" package) and evaluate expressions
-(in the "interpretation" package). The three described mutation types are implemented
-with only minor technical divergences (in the "mutation" package) from their original
-description.
+profile smart contract execution (in the "profiling" package), evaluate expressions
+(in the "interpretation" package), and generate code (in the "synthesis" package). The
+three described mutation types are implemented with only minor technical divergences
+(in the "mutation" package) from their original description.
 
 Algorithmic extensions were required to enable the application of binary operators
 to expressions of incompatible types: type conversions are applied where needed, with
@@ -532,13 +546,20 @@ random member as a representative replacement value.
 To process side effects in ++ and -- operators, the expression is not evaluated as it 
 is built, but only once it has been fully constructed. This is needed to know whether 
 a sub-expression involving side effects is actually evaluated, since it could also be 
-an operand in a short-circuiting ||, && or ?: context. Function calls are simulated 
-using the expression evaluator by realizing them as hidden sub-expressions for their 
-evaluation, which are emitted as argument to a single "return" statement in the 
-Solidity code output to implement the called function.
+an operand in a short-circuiting ||, && or ?: context. To allow for a fully constructed
+expression to be evaluated without faults, undefined operations (such as division-by-0)
+are not discarded, but fixed up - by inserting additional operators to correct invalid
+operands - and reevaluated.
+
+Function calls are simulated using the expression evaluator. Internally, a function
+is realized as a sub-expression that combines the function arguments using operators,
+and can thus be evaluated as part of the larger expression containing the function
+call. Externally, the expression realizing the function is emitted in a function
+definition as argument to a single "return" statement for the callee in the Solidity
+code - with corresponding argument aliases.
 
 The profiling step is implemented by emitting events to transmit variable state to
-the event log file, which can then be read into the ECTF application - along with the
+the event log file, which can then be read into the SOLTIX application - along with the
 original contract - to produce the mutated programs. As mentioned earlier, this only
 pertains to "complete" contracts, since assignment sequence program mutations are created
 in the same iteration as the original contract because its expected semantics are

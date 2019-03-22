@@ -100,8 +100,7 @@ INSTALLED_SOLC=`whereis solc | awk '{print $2}'`
 
 # 1. Select compiler binary - using the current solc static binary as initial suggestion
 # TODO use truffle external compiler function to reference the selected binary as well
-SOLC_VERSION_4="0.4.25"
-SOLC_VERSION_5="0.5.1"
+SOLC_VERSION_5="0.5.6"
 
 USER_INPUT=""
 
@@ -115,7 +114,7 @@ echo Generated code currently always complies with 0.5 language rules and does n
 echo 0.4 language-specific constructs anymore.
 echo
 while test "$USER_INPUT" != y && test "$USER_INPUT" != n; do
-	printf "Download static solc binary versions ${SOLC_VERSION_5} and ${SOLC_VERSION_4} now? [y]: " 
+	printf "Download static solc binary version ${SOLC_VERSION_5} now? [y]: " 
 	read USER_INPUT
 	if test "$USER_INPUT" = ""; then
 		USER_INPUT=y
@@ -129,11 +128,6 @@ if test "$USER_INPUT" = y; then
 	else
 		INSTALLED_SOLC=$PWD/solc-${SOLC_VERSION_5}
 		chmod +x "$INSTALLED_SOLC"
-	fi
-
-	echo Downloading solc compiler binary solc-0.4.25 ...
-	if ! wget https://github.com/ethereum/solidity/releases/download/v${SOLC_VERSION_4}/solc-static-linux -O solc-${SOLC_VERSION_4} >/dev/null 2>&1; then
-		echo Error: could not download solc compiler binary
 	fi
 fi
 
@@ -217,6 +211,8 @@ echo "# enable optimization?  will update truffle's  'optimizer { enabled:'  set
 echo "export USE_SOLC_OPTIMIZATION=yes"                                                                        >>"$GENERATED_SETTINGS_FILE"
 echo "# if optimizing - how many runs? will update truffle's  'optimizer { runs:'  setting   "                 >>"$GENERATED_SETTINGS_FILE"
 echo "export SOLC_OPTIMIZATION_RUNS=200"                                                                       >>"$GENERATED_SETTINGS_FILE"
+echo "# if optimizing - use experimental new yul optimizer?"                                                   >>"$GENERATED_SETTINGS_FILE"
+echo "export SOLC_USE_YUL_OPTIMIZER=no"                                                                        >>"$GENERATED_SETTINGS_FILE"
 echo "# avoid generating exponentiation (**) code - workaround for ganache-cli crashes and old solc versions"  >>"$GENERATED_SETTINGS_FILE"
 echo "export CODEGEN_AVOID_EXP_OPERATOR=yes"                                                                   >>"$GENERATED_SETTINGS_FILE"                                           
 echo "# avoid generating shift (<<, >>) code - workaround for ganache-cli crashes"                             >>"$GENERATED_SETTINGS_FILE"

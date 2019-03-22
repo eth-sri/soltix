@@ -6,6 +6,17 @@ if ! . "$SETTINGS"; then
         exit 1
 fi
 
+# Apply overrides
+if test "$OVERRIDE_USE_SOLC_OPTIMIZATION" != ""; then
+	export USE_SOLC_OPTIMIZATION="$OVERRIDE_USE_SOLC_OPTIMIZATION"
+fi
+if test "$OVERRIDE_SOLC_OPTIMIZATION_RUNS" != ""; then
+	export SOLC_OPTIMIZATION_RUNS="$OVERRIDE_SOLC_OPTIMIZATION_RUNS"
+fi
+if test "$OVERRIDE_SOLC_USE_YUL_OPTIMIZER" != ""; then
+	export SOLC_USE_YUL_OPTIMIZER="$OVERRIDE_SOLC_USE_YUL_OPTIMIZER"
+fi
+
 if test "$#" != 2; then
 	echo "Usage: external-solc.sh [input.sol] [output.json]"
 	exit 1
@@ -38,8 +49,14 @@ else
 echo '           "enabled": false,'   >>"$SOLC_INPUT_JSON_FILE"
 fi
 
+if test "$SOLC_USE_YUL_OPTIMIZER" = yes; then
+	YUL_OPTIMIZER_SETTING=true
+else
+	YUL_OPTIMIZER_SETTING=false
+fi
 
-echo '            "runs": '$SOLC_OPTIMIZATION_RUNS >>"$SOLC_INPUT_JSON_FILE"
+echo '            "runs": '$SOLC_OPTIMIZATION_RUNS',' >>"$SOLC_INPUT_JSON_FILE"
+echo '            "details": { "yul": '$YUL_OPTIMIZER_SETTING' }' >>"$SOLC_INPUT_JSON_FILE"
 
 cat >>"$SOLC_INPUT_JSON_FILE" <<EOF
         },
