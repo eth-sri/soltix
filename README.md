@@ -83,9 +83,25 @@ generated and how, and how the original equivalence testing technique is integra
 
 # Getting started
 
-## Requirements
+The framework can be used in Docker or natively on Linux/macOS systems.
 
-* Operating system: Linux
+## Docker installation
+
+To build a Docker image containing the ready-to-use framework, run:
+
+	docker build . -t soltix
+
+The [Docker-specifics](#docker-specifics) section describes how to use it.
+
+
+## Native installation
+
+To perform a native installation of the framework, follow the steps described
+in this section.
+
+### Requirements
+
+* Operating system: Linux or macOS
 * Java 8+
 * Maven
 * NodeJS 10+ (to use truffle and ganache-cli)
@@ -99,12 +115,9 @@ g++:
 
         sudo apt-get install build-essential
 
-Java 8+:
+Java 8+ (OpenJDK):
 
-        sudo apt-add-repository ppa:webupd8team/java
-        sudo apt-get update
-        sudo apt-get install oracle-java8-installer
-        sudo apt-get install oracle-java8-set-default
+        sudo apt-get -y install openjdk-8-jdk
 
 Maven:
 
@@ -130,7 +143,7 @@ directory by executing the script:
 This requires no sudo access and creates nodejs binaries in the ~/local/bin
 directory. 
 
-## Build
+### Build
 
 To build and configure the SOLTIX software, execute the interactive setup 
 script and answer its questions:
@@ -146,6 +159,30 @@ optimization settings.
 A basic introduction to the most important framework commands is given below.
 A technical overview on what these commands do is described at the end of this
 document in the [technical details](#technical-details) section.
+
+### Docker-specifics
+
+The commands described below have the same form regardless of whether you use
+the Docker image or a native installation. When using Docker, they are started 
+with the "docker run" command. Because state is not persisted in the container,
+command sequences such as:
+
+        docker run ./soltix/bin/generate-contract-set.sh ... <output-directory>
+        docker run ./test-env-truffle/bin/run-all-tests.sh <output-directory>
+
+would normally fail due to the contract set getting purged when the generation
+command ends. In order to address this, a local filesystem directory can be
+mounted as container volume to store contracts - this is also desirable when
+working on test code (log files are unfortunately not available on the host
+yet).
+
+To store contracts in the host's current working directory ($PWD) and address
+them from the container by using a "/VOL" prefix, the following example
+commands generate and execute a contract set containing one contract ($PWD/TMP):
+
+        docker run --mount type=bind,source=$PWD,target=/VOL soltix ./soltix/bin/generate-contract-set.sh 1 1 1 1 1 1 /VOL/TMP --complete
+        docker run --mount type=bind,source=$PWD,target=/VOL soltix ./test-env-truffle/bin/run-all-tests.sh /VOL/TMP 0
+
 
 ### Introduction
 

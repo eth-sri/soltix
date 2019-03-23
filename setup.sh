@@ -35,8 +35,8 @@ verify_nodejs_path() {
 while test "$#" != 0; do
 	arg_part_one=`echo $1 | awk -F'=' '{print $1}'`
 	arg_part_two=`echo $1 | awk -F'=' '{print $2}'`
-	if test "$arg_part_one" = --no-prompt; then
-		NO_PROMPT=yes
+	if test "$arg_part_one" = --use-defaults; then
+		USE_DEFAULTS=yes
 	elif test "$arg_part_one" = --solc-path; then
 		SELECTED_COMPILER="$arg_part_two"
 		if ! verify_solc_path "$SELECTED_COMPILER"; then
@@ -85,15 +85,14 @@ fi
 cd "$CURDIR"
 
 
-echo Building helper tools...
-MAKELOG="$LOGDIR"/tools.log
-cd soltix/bin
-if ! make >"$MAKELOG" 2>&1; then
-	echo Build error - see log "$MAKELOG"
-	exit 1
-fi
-
-cd "$CURDIR" 
+#echo Building helper tools...
+#MAKELOG="$LOGDIR"/tools.log
+#cd soltix/bin
+#if ! make >"$MAKELOG" 2>&1; then
+#	echo Build error - see log "$MAKELOG"
+#	exit 1
+#fi
+#cd "$CURDIR" 
 
 
 INSTALLED_SOLC=`whereis solc | awk '{print $2}'`
@@ -115,7 +114,9 @@ echo 0.4 language-specific constructs anymore.
 echo
 while test "$USER_INPUT" != y && test "$USER_INPUT" != n; do
 	printf "Download static solc binary version ${SOLC_VERSION_5} now? [y]: " 
-	read USER_INPUT
+	if test "$USE_DEFAULTS" != yes; then
+		read USER_INPUT
+	fi
 	if test "$USER_INPUT" = ""; then
 		USER_INPUT=y
 	fi
@@ -140,7 +141,11 @@ fi
 
 while test "$SELECTED_COMPILER" = ""; do
 	printf "Please select the solc compiler binary path to use [$INSTALLED_SOLC]: "
-	read USER_INPUT
+	if test "$USE_DEFAULTS" != yes; then
+		read USER_INPUT
+	else
+		USER_INPUT=""
+	fi
 	if test "$USER_INPUT" = ""; then
 		if test "$INSTALLED_SOLC" = ""; then
 			echo Error: You selected the default compiler, but no installed compiler has been found
@@ -171,7 +176,9 @@ fi
 SELECTED_NODE_DIR=""
 while test "$SELECTED_NODE_DIR" = ""; do
 	printf "Please enter the directory path containing the node and npm binaries to use [$DEFAULT_NODE_DIR]: "
-	read USER_INPUT
+	if test "$USE_DEFAULTS" != yes; then
+		read USER_INPUT
+	fi
 
 	if test "$USER_INPUT" = ""; then
 		# Default choice
