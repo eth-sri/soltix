@@ -230,7 +230,7 @@ echo "# generate function arguments of struct type? Requires CODEGEN_USE_ABI_ENC
 echo "export CODEGEN_ALLOW_STRUCTS_IN_FUNCTION_ABI=no"                                                        >>"$GENERATED_SETTINGS_FILE"
 echo                                                                                                           >>"$GENERATED_SETTINGS_FILE"
 echo "export NODEDIR=\"${SELECTED_NODE_DIR}\""                                                                 >>"$GENERATED_SETTINGS_FILE"
-echo "export PATH=\"${PWD}/soltix/bin:${PWD}/test-env-truffle/bin:${PWD}/test-env-truffle/tools:$PATH\""         >>"$GENERATED_SETTINGS_FILE"
+echo "export PATH=\"${PWD}/soltix/bin:${PWD}/test-env-truffle/bin:${PWD}/test-env-truffle/tools:${PWD}/tools:$PATH\""         >>"$GENERATED_SETTINGS_FILE"
 
 
 . ./settings.cfg.sh  # "$GENERATED_SETTINGS_FILE"

@@ -160,7 +160,7 @@ A basic introduction to the most important framework commands is given below.
 A technical overview on what these commands do is described at the end of this
 document in the [technical details](#technical-details) section.
 
-### Docker-specifics
+### Docker specifics
 
 The commands described below have the same form regardless of whether you use
 the Docker image or a native installation. When using Docker, they are started 
@@ -182,6 +182,9 @@ commands generate and execute a contract set containing one contract ($PWD/TMP):
 
         docker run --mount type=bind,source=$PWD,target=/VOL soltix ./soltix/bin/generate-contract-set.sh 1 1 1 1 1 1 /VOL/TMP --complete
         docker run --mount type=bind,source=$PWD,target=/VOL soltix ./test-env-truffle/bin/run-all-tests.sh /VOL/TMP 0
+
+Generated contract sets can automatically be parallelized with docker instances,
+as described in the section on [combined generation and execution](#generating-and-executing-contracts).
 
 
 ### Introduction
@@ -209,6 +212,10 @@ contracts without any equivalence-testing transformations can also be produce me
 information on program execution correctness, particularly for contracts that
 are self-contained due to internal correctness checks - as described below - or to compare
 the behavior of the same contract executed at varying optimization levels.
+
+The generation functions are described below, followed by the execution functions,
+and finally a section on [convenience scripts](#generating-and-executing-contracts) that
+combine generation and execution and also enable parallelization with docker.
 
 
 ### Generation
@@ -422,6 +429,34 @@ semantically equivalent transformation using:
 As in the single-contract case, no transformations and optimization testing are
 possible by using a mutations count argument of 0 or "optimize", respectively.
 
+#### Generating and executing contracts
+
+The contract generation and execution steps can be performed with a script that
+combines both steps. For example, to generate and execute a single contract with
+the specified settings, run:
+
+        ./tools/generate-and-run-contract.sh <generation-settings> <execution-settings>
+
+e.g.:
+
+        ./tools/generate-and-run-contract.sh 0 10 1 2 20 X --assignmentSequence 0
+
+This will use the generate-contract.sh and run-one-test.sh scripts described below.
+An additional script can process contract sets by invoking the generate-contract-set.sh
+and run-all-tests.sh scripts described below, e.g. to generate and execute 5 contracts:
+
+	./tools/generate-and-run-contract-set.sh 5 0 10 1 2 20 X --assignmentSequence 0
+
+For contract sets, an additional script can split the work and distribute it to
+multiple docker instances for parallelization:
+
+        ./tools/docker-generate-and-run-contract-set.sh 2 6 1 1 1 1 1 DIR --complete 0
+
+... with the same arguments as generate-and-run-contract-set.sh, but with an additional
+count of docker instances to use passed as first argument. In the example, 6 contracts
+are generated and executed starting from seed 6, and will be executed by two docker
+instances: instance 1 doing contract seed 1 to 3 and instance 2 doing contract seed
+4 to 6. Results are stored in DIR, with sub directories for the instances.
 
 ### Test process
 

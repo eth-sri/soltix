@@ -31,7 +31,7 @@ if test -d "$DIRECTORY"; then
 	exit 1
 fi
 
-mkdir "$DIRECTORY"
+mkdir -p "$DIRECTORY"
 touch "$DIRECTORY"/is_generated_set
 
 TEMPDIR="$DIRECTORY/_generated"

@@ -146,12 +146,12 @@ if test -d "$INPUT_FILE"; then
 	DEBUG_INPUT=yes
 	if test "$RUN_SINGLE_CONTRACT_FILE" !=  ""; then
 		if ! test -f "$INPUT_FILE/c0.sol"; then
-			echo Error: Input directory does not contain c0.sol
+			echo Error: Input directory $INPUT_FILE does not contain c0.sol
 			usage
 		fi
 	else
 		if ! test -f "$INPUT_FILE/original.sol" || ! test -f "$INPUT_FILE/instrumented.sol"; then
-			echo Error: Input directory does not contain original.sol and/or instrumented.sol
+			echo Error: Input directory $INPUT_FILE does not contain original.sol and/or instrumented.sol
 			usage
 		fi
 	fi

@@ -47,7 +47,7 @@ elif test "$#" = 13; then
     METADATA_OUTPUT_FILE="$12"
                     MODE="$13"
 else
-	echo Invalid argument count "$#"
+	echo generate-contract: Invalid argument count "$#"
 	usage
 fi
 
