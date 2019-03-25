@@ -55,7 +55,7 @@ while test "$i" -le "$CONTRACT_COUNT"; do
 
 	if ! generate-contract.sh "$PRNG_SEED" "$FUNCTION_COUNT" "$ASSIGNMENTS_LOWER_BOUND" "$ASSIGNMENTS_UPPER_BOUND" "$VARIABLE_COUNT" "$TEMPDIR" "$MODE" >/dev/null 2>&1; then
 #				"$TEMP_CONTRACT_FILE" "$TEMP_CONSTR_BASE_FILE" "$TEMP_TX_BASE_FILE" "$TEMP_CONSTR_FULL_FILE" "$TEMP_TX_FULL_FILE" >/dev/null 2>&1; then
-		echo Command: ./generate-contract.sh "$PRNG_SEED" "$FUNCTION_COUNT" "$ASSIGNMENTS_LOWER_BOUND" "$ASSIGNMENTS_UPPER_BOUND" "$VARIABLE_COUNT" "$TEMPDIR" "$MODE" 
+		echo Command: generate-contract.sh "$PRNG_SEED" "$FUNCTION_COUNT" "$ASSIGNMENTS_LOWER_BOUND" "$ASSIGNMENTS_UPPER_BOUND" "$VARIABLE_COUNT" "$TEMPDIR" "$MODE" 
 		echo ERROR in generate-contract.sh
 		
 exit 1

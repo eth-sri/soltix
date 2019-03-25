@@ -113,7 +113,7 @@ else
 	if test "$MODE" = --assignmentSequence; then
 		# An assignment sequence function type - all evaluations, fix-ups and mutatins have
 		# already be performed
-		if ! ./run-soltix.sh "$CONTRACT_FILE" --solidityOutput="$FORMATTED_CONTRACT_FILE" --metadataOutput="$METADATA_OUTPUT_FILE"; then
+		if ! run-soltix.sh "$CONTRACT_FILE" --solidityOutput="$FORMATTED_CONTRACT_FILE" --metadataOutput="$METADATA_OUTPUT_FILE"; then
 			echo generate-contract.sh: Error processing generated contract
 			exit 1
 		fi
@@ -121,7 +121,7 @@ else
 		# This is a "random" rather than fixed (assignment sequence) contract function type -
 		# we perform a separate interpretation step
 		:
-		if ! ./run-soltix.sh "$CONTRACT_FILE" --solidityOutput="$FORMATTED_CONTRACT_FILE" --metadataOutput="$METADATA_OUTPUT_FILE"; then
+		if ! run-soltix.sh "$CONTRACT_FILE" --solidityOutput="$FORMATTED_CONTRACT_FILE" --metadataOutput="$METADATA_OUTPUT_FILE"; then
 		#	--inject-loop-limits; then
 #			--interpret="$TRANSACTIONS_JSON_FILE"="	
 			echo generate-contract.sh: Error processing generated contract

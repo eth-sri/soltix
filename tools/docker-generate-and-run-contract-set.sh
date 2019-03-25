@@ -31,6 +31,9 @@ CONTRACT_COUNT=$2
 SEED=$3
 CONTRACT_DIR="$8"
 
+if test "$DOCKER_LOGDIR" = ""; then
+	DOCKER_LOGDIR="docker-logs"
+fi
 
 if test -d "$CONTRACT_DIR"; then
        echo Contract directory "$CONTRACT_DIR" already exists - please delete it first
@@ -50,8 +53,8 @@ COMMAND_POSTFIX="$1 $2 $3 $4 #DIR# $6 $7"
 
 
 rm -rf _jobs.tmp
-echo running   dockerize-set-command.sh "$COMMAND_PREFIX" $CONTRACT_COUNT $SEED $DOCKER_COUNT $CONTRACT_DIR "$COMMAND_POSTFIX" "docker-logs"
-dockerize-set-command.sh "$COMMAND_PREFIX" $CONTRACT_COUNT $SEED $DOCKER_COUNT $CONTRACT_DIR "$COMMAND_POSTFIX" "docker-logs" | while read line; do
+echo running   dockerize-set-command.sh "$COMMAND_PREFIX" $CONTRACT_COUNT $SEED $DOCKER_COUNT $CONTRACT_DIR "$COMMAND_POSTFIX" "$DOCKER_LOGDIR"
+dockerize-set-command.sh "$COMMAND_PREFIX" $CONTRACT_COUNT $SEED $DOCKER_COUNT $CONTRACT_DIR "$COMMAND_POSTFIX" "$DOCKER_LOGDIR" | while read line; do
 	if test "$FIRST" = ""; then
 		cat _logfile.tmp >>_first.tmp
 		FIRST="$line"

@@ -458,6 +458,10 @@ are generated and executed starting from seed 6, and will be executed by two doc
 instances: instance 1 doing contract seed 1 to 3 and instance 2 doing contract seed
 4 to 6. Results are stored in DIR, with sub directories for the instances.
 
+Simple bechmarks on multiple docker instances can be taken by using the script:
+
+        ./tools/docker-benchmark.sh
+
 ### Test process
 
 A large generated or externally supplied contract set can be executed using the
