@@ -76,7 +76,7 @@ public class LiveEMIMutator implements IMutator {
 
     protected void processASTNode(ASTNode node) throws Exception {
         VariableEnvironment environment = node.getVariableEnvironment();
-        final boolean mutateAllStatements = true; // for debugging
+        final boolean mutateAllStatements = false; // for debugging
 
         if (node instanceof ASTContractDefinition) {
             currentContract = (ASTContractDefinition)node;
@@ -85,7 +85,7 @@ public class LiveEMIMutator implements IMutator {
             currentFunction = (ASTFunctionDefinition)node;
         }
 
-        if (environment != null && (mutateAllStatements || prng.flipCoin())) {
+        if (environment != null && (mutateAllStatements || (prng.flipCoin() && prng.flipCoin()))) {
             if (currentContract == null) {
                 throw new Exception("LiveEMIsoltix.processASTNode: Mutation without containing contract");
             }
