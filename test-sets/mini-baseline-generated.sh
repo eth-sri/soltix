@@ -44,7 +44,7 @@ generate_and_run_contract_set() {
 	fi
 
 	if test "$DOCKER_INSTANCES" = 0; then
-		generate_and_run_contract_set $1 $2 $3 $4 $5 $6 $7 $8 $9
+		generate-and-run-contract-set.sh $1 $2 $3 $4 $5 $6 $7 $8 $9
 	else
 		DOCKER_LOGDIR="$7" docker-generate-and-run-contract-set.sh $DOCKER_INSTANCES $1 $2 $3 $4 $5 $6 $7 $8 $9
 	fi	

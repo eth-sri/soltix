@@ -9,6 +9,9 @@ fi
 # Test effect of multiple docker instances to process tests. Most code generation
 # and execution operations are largely or entirely single-threaded and benefit
 # from multiple instances on multi-core systems
+#
+# TODO doing this may be counter-productive for large test cases, e.g. in Live-EMI.
+# Investigate this.
 
 docker_list() {
         name=$1
