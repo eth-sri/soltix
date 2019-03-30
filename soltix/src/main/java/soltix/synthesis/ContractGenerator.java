@@ -98,7 +98,7 @@ public class ContractGenerator {
 
             // Generate variable of random type - which is also generated and added to the contract on demand
             // for user-defined (struct) types
-            ASTVariableDeclaration variableDeclaration = variableGenerator.generateRandomVariable(contractDefinition, name, true, true);
+            ASTVariableDeclaration variableDeclaration = variableGenerator.generateRandomVariable(contractDefinition, name, true, true, false);
 
             contractDefinition.addChildNode(variableDeclaration);
 

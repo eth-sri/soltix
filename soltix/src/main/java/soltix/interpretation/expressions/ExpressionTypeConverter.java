@@ -31,7 +31,7 @@ import soltix.util.RandomNumbers;
 import static soltix.ast.ASTBinaryOperation.Operator.OP_EXP;
 
 /**
- * Class two expressions to a compatible type for binary operations by converting as needed
+ * Class to bring two expressions to a compatible type for binary operations by converting as needed
  */
 public class ExpressionTypeConverter {
     private Expression firstOperand;
@@ -113,6 +113,7 @@ public class ExpressionTypeConverter {
                     secondRandomMember = typeConverter.convertToCompatibleType(environment, secondRandomMember, firstRandomMember.getType());
                     firstOperand = firstRandomMember;
                     secondOperand = secondRandomMember;
+                    currentSharedType = firstOperand.getType();
                 } else {
                     throw new Exception("ExpressionTypeConverter: Cannot locate struct type " + currentSharedType.getName());
                 }
@@ -125,8 +126,8 @@ public class ExpressionTypeConverter {
                 secondRandomElement = typeConverter.convertToCompatibleType(environment, secondRandomElement, firstRandomElement.getType());
                 firstOperand = firstRandomElement;
                 secondOperand = secondRandomElement;
+                currentSharedType = firstOperand.getType();
             }
-
             // If this was a string from the beginning or since the conversions above, it must also be
             // converted to some other type, since there are no defined operators on strings
             if (Type.isStringType(currentSharedType)) {

@@ -358,15 +358,15 @@ public class TypeConverter {
         ASTFunctionCall functionCall = new ASTFunctionCall(0, false, null);
         ASTIdentifier identifier = new ASTIdentifier(0, "keccak256", 0);
         functionCall.addChildNode(identifier);
-        functionCall.addChildNode(stringExpression.toASTNode());
+        // Apparent 0.5.x change: keccak256 only now(?!) requires "bytes" argument, so we convert to that first
+        functionCall.addChildNode(new ASTVerbatimText(0, "bytes(" + stringExpression.toASTNode().toSolidityCode() + ")"));
         identifier.finalize();
         functionCall.finalize();
 
         ASTNode returnType = TypeContainer.getByteType(32);
 
-        // TODO: Re-enable the expression creation and find a way to evaluate this.
-        // keccak256 implementations exist, though not in Maven Central.
-        // Since keccak256 is only used for string comparisons, we could also compute some other hash
+        // Create function call expression. Note that the bytes() cast added above for code output is not included in the
+        // evaluation, which should not make a difference
         ArrayList<Expression> arguments = new ArrayList<Expression>();
         arguments.add(stringExpression);
         return new Expression(functionCall, arguments, returnType);

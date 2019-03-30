@@ -452,7 +452,7 @@ public class ExpressionEvaluator {
 
 
     protected Value evaluateKeccak256ForOne(StringValue input) throws Exception {
-        byte[] hash = Hash.keccak256(input.getValue().getBytes());
+        byte[] hash = Hash.keccak256(input.getValue().getBytes("UTF-8"));
         return new BytesValue(TypeContainer.getByteType(32), hash);
     }
 

@@ -495,8 +495,8 @@ public class ExpressionGenerator {
                     if (!Configuration.ganacheOptimizationWorkarounds) {
                         // No defined operators - probably can't happen!? TODO Keep one of the arguments, drop the other one if this can really happen?
                         throw new Exception("ExpressionGenerator: Unexpected generation failure: no defined binary operator for "
-                                + firstOperand.toASTNode().toSolidityCode()
-                                + " and " + secondOperand.toASTNode().toSolidityCode() + ", types "
+                                + "["+firstOperand.toASTNode().toSolidityCode()+"]"
+                                + "      and      [" + secondOperand.toASTNode().toSolidityCode() + "]    , types "
                                 + firstOperand.getType().toSolidityCode() + " vs " + secondOperand.getType().toSolidityCode());
                     } else {
                         // Due to optimization workarounds, constellations without valid operations occur.

@@ -50,12 +50,20 @@ public class VariableGenerator {
     public ASTVariableDeclaration generateRandomVariable(ASTContractDefinition contractDefinition,
                                                          String name,
                                                          boolean withInitializer,
-                                                         boolean allowStructs) throws Exception {
+                                                         boolean allowStructs,
+                                                         boolean isFunctionParameter) throws Exception {
         ASTNode type = TypeContainer.chooseRandomType(ast, contractDefinition, allowStructs, structTypeGenerator, prng);
         ASTVariableDeclaration variableDeclaration;
+        String storageLocation;
+
+        if (isFunctionParameter && Type.isStringType(type)) {
+            storageLocation = "memory";
+        } else {
+            storageLocation = "default";
+        }
 
         variableDeclaration = new ASTVariableDeclaration(0, name, type.toSolidityCode(),
-                "default", "internal", false, false);
+                storageLocation, "internal", false, false);
         // Specify type
         variableDeclaration.addChildNode(type);
         if (withInitializer) {

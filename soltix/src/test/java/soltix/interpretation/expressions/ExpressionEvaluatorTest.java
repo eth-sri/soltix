@@ -24,15 +24,13 @@ import soltix.ast.ASTBinaryOperation;
 import soltix.ast.ASTNode;
 import soltix.ast.ASTUnaryOperation;
 import soltix.interpretation.TypeContainer;
-import soltix.interpretation.values.BoolValue;
-import soltix.interpretation.values.BytesValue;
-import soltix.interpretation.values.IntegerValue;
-import soltix.interpretation.values.ValueContainer;
+import soltix.interpretation.values.*;
 import soltix.interpretation.variables.Variable;
 import soltix.interpretation.variables.VariableEnvironment;
 import soltix.interpretation.variables.VariableValues;
 import org.junit.Assert;
 import org.junit.Test;
+import soltix.synthesis.TypeConverter;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -627,4 +625,39 @@ public class ExpressionEvaluatorTest extends UtilExpressionTests {
         System.out.println("got " + e5.toASTNode().toSolidityCode() + " = " + result);
     }
 
+    // emit BYTES9( bytes9(keccak256(bytes(   "\u00f0"))) ); gives 0x94c7cc515bbf9e53f6
+    //                               ^^^^^= 0xc3b0
+    // we used to get, due to a lack of Unicode value handling:    0x4DC607F83E241B1CDE
+    // from                                                        0x4DC607F83E241B1CDE4231B51EEB04C6391A215BC7162A126232C1B4489D738B
+    @Test
+    public void keccakBugCase() throws Exception {
+        VariableEnvironment environment = new VariableEnvironment(null, true);
+        e_environment = environment;
+
+        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null);
+        e_expressionEvaluator = expressionEvaluator;
+
+        StringValue stringValue = new StringValue("\\u00f0");
+        Expression stringExpression = new Expression(stringValue);
+
+        TypeConverter typeConverter = new TypeConverter(null, null, expressionEvaluator);
+        Expression hashedValueExpression = typeConverter.hashString(null, stringExpression);
+        Expression convertedResultExpression = new Expression(hashedValueExpression, TypeContainer.getByteType(9));
+        String resultString = e(convertedResultExpression);
+        Assert.assertTrue(resultString.equals("bytes9(0x94C7CC515BBF9E53F6)"));
+
+        stringValue = new StringValue("\\u00f0\\u0027");
+        stringExpression = new Expression(stringValue);
+        hashedValueExpression = typeConverter.hashString(null, stringExpression);
+        convertedResultExpression = new Expression(hashedValueExpression, TypeContainer.getByteType(9));
+        resultString = e(convertedResultExpression);
+        Assert.assertTrue(resultString.equals("bytes9(0x27A6A1ADCA40FE0CFF)"));
+
+        stringValue = new StringValue("\\u0099o");
+        stringExpression = new Expression(stringValue);
+        hashedValueExpression = typeConverter.hashString(null, stringExpression);
+        convertedResultExpression = new Expression(hashedValueExpression, TypeContainer.getByteType(9));
+        resultString = e(convertedResultExpression);
+        Assert.assertTrue(resultString.equals("bytes9(0x75498974BA620F74F9)"));
+    }
 }

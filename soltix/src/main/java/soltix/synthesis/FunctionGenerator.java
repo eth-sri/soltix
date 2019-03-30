@@ -103,7 +103,7 @@ public class FunctionGenerator {
 
             // Note: In this context struct arguments are not allowed, since they cannot be passed at least by truffle,
             // but may not currently be supported by the ABI either
-            ASTVariableDeclaration parameter = variableGenerator.generateRandomVariable(containingContract, argName, false,false);
+            ASTVariableDeclaration parameter = variableGenerator.generateRandomVariable(containingContract, argName, false,false, true);
 
             // TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
             // Add the parameter! This was missed for some reason, but it's currently beneficial to start with simpler
@@ -260,14 +260,14 @@ public class FunctionGenerator {
             }
             sb.append(expression.getType().toSolidityCode());
             sb.append(" ");
-            if (Type.isStructType(ast, expression.getType())) { // TODO more generic solution?
+            if (Type.isStructType(ast, expression.getType()) || Type.isStringType(expression.getType())) { // TODO more generic solution?
                 sb.append("memory ");
             }
             sb.append(expression.getOutputAlias());
         }
         sb.append(") public returns (");
         sb.append(randomResultType.toSolidityCode());
-        if (Type.isStructType(ast, randomResultType)) { // TODO more generic solution?
+        if (Type.isStructType(ast, randomResultType) || Type.isStringType(randomResultType)) { // TODO more generic solution?
             sb.append(" memory");
         }
         sb.append(") {");
@@ -427,7 +427,13 @@ public class FunctionGenerator {
 
             String checkStatement = null;
             if (assignmentResultOracle) {
-                checkStatement = "if (" + lhsVariableString + " != " + evaluationResult.values.get(0).toASTNode(false).toSolidityCode()
+                String lhsVariableStringForComparison = Type.isStringType(expression.getType())
+                                        ? "keccak256(bytes(" + lhsVariableString + "))"
+                                            : lhsVariableString;
+                String rhsVariableStringForComparison = Type.isStringType(expression.getType())
+                                        ? "keccak256(bytes(" + evaluationResult.values.get(0).toASTNode(false).toSolidityCode() + "))"
+                                            : evaluationResult.values.get(0).toASTNode(false).toSolidityCode();
+                checkStatement = "if (" + lhsVariableStringForComparison + " != " + rhsVariableStringForComparison
                         + ") emit EXPR_ERROR(" + errorId++ + ");";
             }
 

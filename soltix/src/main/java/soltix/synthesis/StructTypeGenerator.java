@@ -51,7 +51,7 @@ public class StructTypeGenerator {
         for (int i = 0; i < memberCount; ++i) {
             String memberName = "m" + String.valueOf(i);
 
-            ASTVariableDeclaration memberVariable = variableGenerator.generateRandomVariable(contract, memberName, false,true);
+            ASTVariableDeclaration memberVariable = variableGenerator.generateRandomVariable(contract, memberName, false,true, false);
             structDefinition.addChildNode(memberVariable);
         }
         structDefinition.finalize();

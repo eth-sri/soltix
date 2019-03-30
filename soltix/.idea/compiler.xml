@@ -7,12 +7,7 @@
         <sourceTestOutputDir name="target/generated-test-sources/test-annotations" />
         <outputRelativeToContentRoot value="true" />
         <module name="soltix" />
-        <module name="mutator" />
       </profile>
     </annotationProcessing>
-    <bytecodeTargetLevel>
-      <module name="soltix" target="1.5" />
-      <module name="mutator" target="1.5" />
-    </bytecodeTargetLevel>
   </component>
 </project>
