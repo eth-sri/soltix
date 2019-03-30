@@ -167,7 +167,7 @@ public class TypeContainer {
             weightedRandomChoice = new WeightedRandomChoice();
             // Prepare random weighted type choice
             // TODO weights should be configurable - separately for storage variables and parameters
-            weightedRandomChoice.addItem(35); // 0: Integers - overrepresented due to richer set of operations
+            weightedRandomChoice.addItem(/*35*/40); // 0: Integers - overrepresented due to richer set of operations
             weightedRandomChoice.addItem(30); // 1: Bytes
             weightedRandomChoice.addItem(20); // 2: Struct
             weightedRandomChoice.addItem(10); // 3: Bool
@@ -176,7 +176,7 @@ public class TypeContainer {
            // - subscript the result to obtain a value to work with
            // Disabled for now to avoid breaking all code generation
 
-           weightedRandomChoice.addItem(5); //  4: String: not much we can do with them, but they test the ABI
+//           weightedRandomChoice.addItem(5); //  4: String: not much we can do with them, but they test the ABI
             // TODO Enums, arrays, and eventually other contracts (eating into integer weight) - accessing "ast"
           //  weightedRandomChoice.addItem(5); //  3: Enum
         }
