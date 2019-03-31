@@ -442,6 +442,16 @@ public class Expression {
             resultString = firstOperand.toASTNode(undoExpressions).toSolidityCode() + "[" + indexAccess.toASTNode(undoExpressions).toSolidityCode() + "]";
             result = new ASTVerbatimText(0, resultString);
         } else if (functionCall != null) {
+            if (functionCall.getCalled() instanceof ASTIdentifier
+                    && ((ASTIdentifier)functionCall.getCalled()).getName().equals("keccak256")
+                && (functionCall.getArguments() == null || functionCall.getArguments().size() == 0)) {
+		// We can only now produce the argument AST node for the function call, because the argument expression
+		// evaluation may have resulted in fix-up operations, e.g. for division by zero.
+		// Apparent 0.5.x change: keccak256 only now(?!) requires "bytes" argument, so we convert to that first
+		// TODO proper modeling of "bytes" type
+		// TODO not passing "undoExpressions", thereby introducing inc/dec bugs, is an easy mistake to make
+                functionCall.addArgumentNode(new ASTVerbatimText(0, "bytes(" + functionCallArguments.get(0).toASTNode(undoExpressions).toSolidityCode() + ")"));
+            }
             result = new ASTVerbatimText(0, functionCall.toSolidityCode());
         } else if (castExpressionType != null) {
             result = new ASTVerbatimText(0, castExpressionType.toSolidityCode() + "(" + firstOperand.toASTNode(undoExpressions).toSolidityCode() + ")");

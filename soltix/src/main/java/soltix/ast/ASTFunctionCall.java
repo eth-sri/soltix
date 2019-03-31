@@ -97,6 +97,13 @@ public class ASTFunctionCall extends ASTNode {
     @Override
     public String toSolidityCodePostfix() { return null; }
 
+    public void addArgumentNode(ASTNode argument) {
+        if (arguments == null) {
+            arguments = new ArrayList<ASTNode>();
+        }
+        arguments.add(argument);
+    }
+
     public void finalize() throws Exception {
         if (getChildCount() < 1) {
             throw new Exception("Function call has unexpected child count - " + getChildCount());

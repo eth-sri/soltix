@@ -358,8 +358,11 @@ public class TypeConverter {
         ASTFunctionCall functionCall = new ASTFunctionCall(0, false, null);
         ASTIdentifier identifier = new ASTIdentifier(0, "keccak256", 0);
         functionCall.addChildNode(identifier);
-        // Apparent 0.5.x change: keccak256 only now(?!) requires "bytes" argument, so we convert to that first
-        functionCall.addChildNode(new ASTVerbatimText(0, "bytes(" + stringExpression.toASTNode().toSolidityCode() + ")"));
+
+
+	// Create function call node, but leave out function argument for now to allow for expression
+	// fix-up operations. Expression.toASTNode() will add the final argument node
+	// TODO better solution?
         identifier.finalize();
         functionCall.finalize();
 
@@ -369,6 +372,7 @@ public class TypeConverter {
         // evaluation, which should not make a difference
         ArrayList<Expression> arguments = new ArrayList<Expression>();
         arguments.add(stringExpression);
+
         return new Expression(functionCall, arguments, returnType);
     }
 
