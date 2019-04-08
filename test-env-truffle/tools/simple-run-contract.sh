@@ -39,6 +39,12 @@ if ! . "$SETTINGS"; then
         echo Error: Cannot load settings file $SETTINGS - please run setup.sh
         exit 1
 fi
+. `dirname $0`/../paths.cfg.sh
+if ! test "$?" = 0; then
+        echo Error: Cannot load `dirname $0`/../paths.cfg.sh
+        exit 1
+fi
+
 
 
 
@@ -56,10 +62,14 @@ RESULTDIR=results
 #GANACHE_CLI_PATH="$PWD"/node_modules/ethereumjs-testrpc-sc/build/cli.node.js
 #GANACHE_CLI_PATH="$PWD"/node_modules/ganache-cli/build/cli.node.js
 
-BIN_DIR_NAME=`dirname $0`
-GANACHE_CLI_PATH=`realpath $BIN_DIR_NAME/../node_modules/.bin/ganache-cli`
-TRUFFLE_PATH=`realpath $BIN_DIR_NAME/../node_modules/.bin/truffle`
-EXTERNAL_COMPILER_SCRIPT_PATH=`realpath $BIN_DIR_NAME/external-solc/external-solc-for-all.sh`
+TOOLS_DIR_NAME=`dirname $0`
+GANACHE_CLI_PATH=`realpath $TOOLS_DIR_NAME/../node_modules/.bin/ganache-cli`
+TRUFFLE_PATH=`realpath $TOOLS_DIR_NAME/../node_modules/.bin/truffle`
+EXTERNAL_COMPILER_SCRIPT_PATH=`realpath $TOOLS_DIR_NAME/external-solc/external-solc-for-all.sh`
+GETH_START_SCRIPT_PATH=`realpath $TOOLS_DIR_NAME/start-geth.sh`
+RUN_BACKGROUND_SCRIPT_PATH=`realpath $TOOLS_DIR_NAME/../../tools/run-background.sh`
+
+TRUFFLE_CONFIG_DIR=`realpath $TRUFFLE_CONFIG_DIR`
 
 
 # Setup current optimization settings in truffle configuration
@@ -71,30 +81,35 @@ if test "$USE_SOLC_OPTIMIZATION" = yes; then
 else
 	OPTIMIZATION_FLAG=off
 fi
-"$BIN_DIR_NAME"/truffle-optimization-setting.sh $OPTIMIZATION_FLAG $OPTIMIZATION_RUNS
+"$TOOLS_DIR_NAME"/truffle-optimization-setting.sh $OPTIMIZATION_FLAG $OPTIMIZATION_RUNS
 
 
 
+# This setting is probably no longer used:
 # Copy config file, enter project directory
-# 33835 was IIRC aleth default?
-#module.exports={"networks":{"test":{"port":33835,"host":"localhost","network_id":"*","gas":17592186044415,"gasPrice":1}},"compilers":{"external":{"command":"/home/nweller/solidity/build/solc/solc","targets":[]}}};
-
-#cat > "$PROJDIR"/truffle.js <<EOF
-#module.exports={"networks":{"test":{"port":33499,"host":"localhost","network_id":"*","gas":17592186044415,"gasPrice":1}},"compilers":{"external":{"command":"/home/nweller/solidity/build/solc/solc","targets":[]}}};
-#EOF
-
-if test "$GANACHE_CLI_PORT" = ""; then
-	GANACHE_CLI_PORT=33499
-fi
-
-#echo 'module.exports={"networks":{"test":{"port":'$GANACHE_CLI_PORT',"host":"localhost","network_id":"*","gas":17592186044415,"gasPrice":1}},"compilers":{"external":{"command":"/home/nweller/solidity/build/solc/solc","targets":[]}}};' >"$PROJDIR"/truffle.js
-echo 'module.exports={"networks":{"test":{"port":'$GANACHE_CLI_PORT',"host":"localhost","network_id":"*","gas":17592186044415,"gasPrice":1}}};' >"$PROJDIR"/truffle.js
-
-#module.exports={"networks":{"test":{"port":33499,"host":"localhost","network_id":"*","gas":17592186044415,"gasPrice":1}},"compilers":{"external":{"command":"/home/nweller/solidity/build/solc/solc","targets":[]}}};
+#if test "$GANACHE_CLI_PORT" = ""; then
+#	GANACHE_CLI_PORT=33499
+#fi
 
 
+case $BLOCKCHAIN_BACKEND in
+	ganache)
+		TRUFFLE_CONFIG_PATH="$TRUFFLE_CONFIG_DIR"/truffle-ganache.js	
+		;;
+	geth)
+		TRUFFLE_CONFIG_PATH="$TRUFFLE_CONFIG_DIR"/truffle-geth.js	
+		;;
+	*)
+		echo Error: Unknown BLOCKCHAIN_BACKEND value selected in settings.cfg.sh: $BLOCKCHAIN_BACKEND
+		exit 1
+esac
 
-#module.exports={"networks":{"test":{"port":33499,"host":"localhost","network_id":"*","gas":17592186044415,"gasPrice":1}}};
+
+cp "$TRUFFLE_CONFIG_PATH" "$PROJDIR"/truffle.js
+
+
+# echo 'module.exports={"networks":{"test":{"port":'$GANACHE_CLI_PORT',"host":"localhost","network_id":"*","gas":17592186044415,"gasPrice":1}}};' >"$PROJDIR"/truffle.js
+
 if ! cd "$PROJDIR"; then
 	echo Error: Cannot enter project directory $PROJDIR
 	exit 1
@@ -105,31 +120,7 @@ if ! test -d contracts; then
 	exit 1
 fi
 
-cat >contracts/Migrations.sol <<EOF
-//pragma solidity ^0.4.4;
-
-contract Migrations {
-  address public owner;
-  uint public last_completed_migration;
-
-  modifier restricted() {
-    if (msg.sender == owner) _;
-  }
-
-  constructor() public {
-    owner = msg.sender;
-  }
-
-  function setCompleted(uint completed) public restricted {
-    last_completed_migration = completed;
-  }
-
-  function upgrade(address new_address) public restricted {
-    Migrations upgraded = Migrations(new_address);
-    upgraded.setCompleted(last_completed_migration);
-  }
-}
-EOF
+cp "$TRUFFLE_CONFIG_DIR"/Migrations.sol contracts/Migrations.sol
 
 if ! test -d test; then
 	echo "Error: Input directory does not look like a truffle project - missing 'test' directory"
@@ -156,6 +147,13 @@ run_ganache_cli() {
 	echo RPC server ready
 }
 
+
+run_geth() {
+	echo Starting geth - log set to "$GETH_LOG"...
+	"$RUN_BACKGROUND_SCRIPT_PATH" "$GETH_START_SCRIPT_PATH" "$GETH_LOG"
+	sleep 5 # TODO proper availability indicator
+}
+
 run_truffle_test() {
 	rm -f profiling-events.log
 	
@@ -164,44 +162,6 @@ run_truffle_test() {
 	mkdir "$RESULTDIR"
 
 	echo Starting truffle test...
-
-	# TODO: To move to truffle-external-compile, we need to prevent "truffle test" from recompiling the
-	# contract. This can be accomplished with the hack of passing "--migrations_directory migrations_null"
-	# and creating an empty migations_null directory.
-	#
-	# The migration must then be performed separately after the compilation. The components truffle and
-	# ganache-cli are apparently pickier about getting to communicate in this case, and --migrate may
-	# require the --reset flag.
-	#
-	# The following sequence appears to replace "truffle test" sucessfully:
-	#
-	#    Prerequisites: - Fixed network of name "test" and id "1234" in truffle.js
-	#                   - Empty migrations_null directory in project directory
-	#    Commands:
-	#          ganache-cli --port 33499 .. --network-id 1234
-	#          truffle compile
-	#          truffle migrate --network test --reset
-	#          truffle test ./test/test.js --network test --migrations_directory migrations_null
-	# TODO 1. Implement this sequence for "truffle compile", then move to/add support for truffle-external-compile
-	#
-	#   https://libraries.io/npm/truffle-external-compile
-	#   https://ethereum.stackexchange.com/questions/34454/run-truffle-test-without-recompile-every-time
-	#   https://stackoverflow.com/questions/52920225/testing-deployed-smart-contract-on-truffle
-	#
-	# UPDATE: The new "truffle compile" scheme works, but truffle-external-compile still looks unusable for
-	# various reasons:
-	#
-	#    1. Not documented properly
-	#    2. Hangs when executed
-	#    3. Apparently isn't included in the npm standard truffle version yet (needs to reference e.g. 
-	# "external-compiler" branch)
-	#
-	# TODO Workaround: Reactivate fast-solc-js from master branch, create command line wrapper, use that
-	# instead of truffle-external-compile
-	#
-	# UPDATE: This seems to work now, using tools/external-solc.
-	# TODO Integrate solc 0.5.1 download
-	#      Get started on 0.5.1 tests
 
 	DUMMY_MIGRATIONS_DIR="./migrations_null"
 	if test -d "$DUMMY_MIGRATIONS_DIR"; then
@@ -222,9 +182,27 @@ run_truffle_test() {
 }
 
 
-run_ganache_cli
+# Start local test blockchain backend
+case $BLOCKCHAIN_BACKEND in
+	ganache)
+		run_ganache_cli
+		;;
+	geth)
+		run_geth
+		;;
+	*)
+		echo Error: Unknown BLOCKCHAIN_BACKEND value selected in settings.cfg.sh: $BLOCKCHAIN_BACKEND
+		exit 1
+esac
+if test "$?" != 0; then
+	echo Error: blockchain startup error
+	exit 1
+fi
 
+
+# Deploy and run tests
 run_truffle_test
+
 RC=$?
 
 # Save results

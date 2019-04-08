@@ -104,10 +104,10 @@ SOLC_VERSION_5="0.5.6"
 USER_INPUT=""
 
 echo The test framework needs a solc compiler binary at least for code parsing.
-echo To compile and run a program, this solc binary can be used as well, or solc-js can be used instead.
+echo To compile and run a program, the same solc binary or solc-js can be used.
 echo
 echo settings.cfg will be generated. It can be used to configure the choice between
-echo solc/solcjs, and the compiler to use binary if needed.
+echo a solc binary and solcjs, optimization settings, and other things.
 echo
 echo Generated code currently always complies with 0.5 language rules and does not use
 echo 0.4 language-specific constructs anymore.
@@ -207,6 +207,34 @@ if ! "$SELECTED_NODE_DIR"/npm install >"$NPMLOG" 2>&1; then
 	echo          If the framework works regardless, this may be ignorable
 fi
 
+# 3. Obtain geth blockchain client if desired
+# TODO install binary package instead?
+USER_INPUT=""
+while test "$USER_INPUT" != y && test "$USER_INPUT" != n; do
+	printf "Download and compile geth blockchain backend now (takes a while and requires recent golang)? [y]: " 
+	if test "$USE_DEFAULTS" != yes; then
+		read USER_INPUT
+	fi
+	if test "$USER_INPUT" = ""; then
+		USER_INPUT=y
+	fi
+done
+if test "$USER_INPUT" = y; then
+	cd "$CURDIR"
+	if ! git clone https://github.com/ethereum/go-ethereum.git; then
+		echo Error: Cannot git clone go-ethereum.git - aborting geth setup
+	else
+		cd go-ethereum
+		if ! make all; then
+			echo Error: make all failed - aborting geth setup
+		else
+			cd ..
+			GETH_PATH=`realpath ./go-ethereum/build/bin/geth`
+		fi
+	fi
+fi
+
+
 cd "$CURDIR"
 
 
@@ -214,6 +242,10 @@ echo "# use solcjs in truffle (otherwise: invoke external solc binary)?"        
 echo "export USE_SOLCJS=no"                                                                                    >>"$GENERATED_SETTINGS_FILE"
 echo "# if USE_SOLCJS=yes - absolute path of solc binary to use"                                               >>"$GENERATED_SETTINGS_FILE"
 echo "export SOLC_BINARY_PATH=\"$SELECTED_COMPILER\""                                                          >>"$GENERATED_SETTINGS_FILE"
+echo "# blockchain backend to use - ganache or geth?"                                                          >>"$GENERATED_SETTINGS_FILE"
+echo "export BLOCKCHAIN_BACKEND=ganache"                                                                       >>"$GENERATED_SETTINGS_FILE"
+echo "# geth binary path to use if BLOCKCHAIN_BACKEND=geth"                                                    >>"$GENERATED_SETTINGS_FILE"
+echo "export GETH_PATH=\"$GETH_PATH\""                                                                         >>"$GENERATED_SETTINGS_FILE"
 echo "# enable optimization?  will update truffle's  'optimizer { enabled:'  setting   "                       >>"$GENERATED_SETTINGS_FILE"
 echo "export USE_SOLC_OPTIMIZATION=yes"                                                                        >>"$GENERATED_SETTINGS_FILE"
 echo "# if optimizing - how many runs? will update truffle's  'optimizer { runs:'  setting   "                 >>"$GENERATED_SETTINGS_FILE"
