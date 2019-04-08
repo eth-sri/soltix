@@ -47,7 +47,7 @@ if pgrep -f "$GETH_PATH"; then
 	#exit 0
 
 	# For now kill instance, reset everything
-	pkill -f "$GETH"
+	pkill -f "$GETH_PATH"
 	while pgrep -f "$GETH_PATH"; do
 		sleep 1
 	done
