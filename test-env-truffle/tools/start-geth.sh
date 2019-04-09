@@ -35,6 +35,14 @@ start() {
         #    --allow-insecure-unlock --unlock $ADDR --password "$PASSWORD_FILE"
 	#
 	# "console" flag disabled to avoid terminal read errors terminating geth when started in background
+	#
+	# TODO find a way to support large contracts, like ganache's "allowUnlimitedContractSize" option.
+	# To begin with:
+	#     - have a large block gas limit value in the config (ok)
+	#     - probably need to patch go-ethereum/core/tx_pool.go, validateTx(), to drop the
+	# ErrOversizedData check
+	#     - afterwards geth.log appears to indicate successfuly deployment, but there's still an
+	# error
         "$GETH_PATH" --port 3000 --networkid 58343 \
                 --mine --minerthreads=1 --etherbase '0xa4d8e9cae4d04b093aac82e6cd355b6b963fb7ff' \
                 --allow-insecure-unlock --unlock '854c55d65bf425569263d5fae98d01bd7a96fd3c' --password "$GETH_KEYSTORE_LIVE"/password.txt \

@@ -219,7 +219,11 @@ echo "      truffle    - $PROJDIR/$RESULTDIR/TruffleTest.log"
 echo "      RPC server - $PROJDIR/$RESULTDIR/TruffleTest.rpc.log"
 
 # Cleanup
-kill $RPC_SERVER_PID
+case $BLOCKCHAIN_BACKEND in
+	ganache)
+		kill $RPC_SERVER_PID
+		;;
+esac
 
 if test "$RC" = 0; then
 	echo OK

@@ -37,6 +37,20 @@ c="$1"
 MUTATIONS_COUNT="$2"
 
 
+# TODO proper error evaluation instead of treating each log type the same
+case $BLOCKCHAIN_BACKEND in
+        ganache)
+		BLOCKCHAIN_LOG_FILE="$PATH_TRUFFLE_RPC_LOG_FILE"
+                ;;
+        geth)
+		BLOCKCHAIN_LOG_FILE="$GETH_LOG"
+                ;;
+        *)
+                echo Error: Unknown BLOCKCHAIN_BACKEND value selected in settings.cfg.sh: $BLOCKCHAIN_BACKEND
+                exit 1
+esac
+
+
 do-run-one-test.sh "$c" $MUTATIONS_COUNT  >current-contract-out.log 2>current-contract-err.log
 RC=$?
 
@@ -46,9 +60,9 @@ if test "$RC" != 0 && test "$CALLED_BY_RUN_ALL_TESTS" != yes; then
 fi
 
 # Check for some errors that may have occurred even if run-one-test.sh indicated success
-if grep 'Error: redPow(normalNum)' "$PATH_TRUFFLE_RPC_LOG_FILE" >/dev/null;  then
+if grep 'Error: redPow(normalNum)' "$BLOCKCHAIN_LOG_FILE" >/dev/null;  then
 	printf "GANACHE-CLI ERROR redPow()"
-elif grep 'Error: Already a number in reduction context' "$PATH_TRUFFLE_RPC_LOG_FILE" >/dev/null;  then
+elif grep 'Error: Already a number in reduction context' "$BLOCKCHAIN_LOG_FILE" >/dev/null;  then
 	printf "GANACHE-CLI ERROR reduction context"
 elif grep 'Could not connect to your Ethereum client' "$PATH_TRUFFLE_LOG_FILE" >/dev/null;  then
 	# It's not clear when exactly this happens, but it does terminate the test and
@@ -117,6 +131,10 @@ elif grep 'Cannot locate data in profiling log'  "$PATH_TRUFFLE_LOG_FILE" >/dev/
 	# which may possibly be addressed by renaming the contract's send() to say _send() (and calls to it)
 	# Or it could be malformed transaction arguments
 	printf "MALFORMED TRANSACTION"
+elif grep 'oversized data' current-contract-out.log >/dev/null; then
+	printf "GETH DEPLOYMENT GAS ERROR #1"
+elif grep 'please check your gas limit' current-contract-out.log >/dev/null; then
+	printf "GETH DEPLOYMENT GAS ERROR #2"
 elif grep 'ERROR: Memory state difference between original and instrumented' current-contract-out.log >/dev/null; then
 	printf "POSSIBLE BUG: INSTRUMENTATION STORAGE ERROR" 
 elif grep 'ERROR: Memory state difference between original and mutated' current-contract-out.log >/dev/null; then
