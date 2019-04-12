@@ -108,8 +108,6 @@ esac
 cp "$TRUFFLE_CONFIG_PATH" "$PROJDIR"/truffle.js
 
 
-# echo 'module.exports={"networks":{"test":{"port":'$GANACHE_CLI_PORT',"host":"localhost","network_id":"*","gas":17592186044415,"gasPrice":1}}};' >"$PROJDIR"/truffle.js
-
 if ! cd "$PROJDIR"; then
 	echo Error: Cannot enter project directory $PROJDIR
 	exit 1
@@ -133,8 +131,8 @@ fi
 
 
 run_ganache_cli() {
+	GANACHE_CLI_PORT=33499 # TODO settings.cfg.sh? Difficulty: needs to be in sync with truffle-ganache.js 
 	echo Starting RPC server on port "$GANACHE_CLI_PORT"...
-# 70 Log RPC server output to /home/nweller/msc-thesis/test-env/test-env-truffle/assets/sol-contract-tester/outputs/logs/current-contract/TruffleTest.rpc.log
 
 	# TODO path 
 	"$GANACHE_CLI_PATH" --port $GANACHE_CLI_PORT --gasLimit 0xfffffffffff --accounts 35 --mnemonic "icon wrestle whale a    utumn practice select fork frost festival cigar report move" --deterministic --verbose-rpc --allowUnlimitedContractSize --network-id test >TruffleTest.rpc.log 2>&1 &
