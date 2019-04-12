@@ -209,6 +209,9 @@ fi
 
 # 3. Obtain geth blockchain client if desired
 # TODO install binary package instead?
+# TODO do it.
+# TODO fix ganache support?
+# TODO fix readme
 USER_INPUT=""
 while test "$USER_INPUT" != y && test "$USER_INPUT" != n; do
 	printf "Download and compile geth blockchain backend now (takes a while and requires recent golang)? [y]: " 
@@ -225,11 +228,15 @@ if test "$USER_INPUT" = y; then
 		echo Error: Cannot git clone go-ethereum.git - aborting geth setup
 	else
 		cd go-ethereum
-		if ! make all; then
-			echo Error: make all failed - aborting geth setup
+		if ! ../tools/patch-geth.sh; then
+			echo Error: Cannot patch geth code - aborting geth setup
 		else
-			cd ..
-			GETH_PATH=`realpath ./go-ethereum/build/bin/geth`
+			if ! make all; then
+				echo Error: make all failed - aborting geth setup
+			else
+				cd ..
+				GETH_PATH=`realpath ./go-ethereum/build/bin/geth`
+			fi
 		fi
 	fi
 fi
