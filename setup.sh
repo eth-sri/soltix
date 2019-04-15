@@ -14,6 +14,10 @@
 
 GENERATED_SETTINGS_FILE="settings.cfg.sh"
 
+# Cleanup in case of reinstallation
+rm -rf go-ethereum
+rm -rf test-env-truffle/node_modules
+
 verify_solc_path() {
 	if ! test -x "$SELECTED_COMPILER"; then
 		return 1
@@ -208,7 +212,7 @@ if ! "$SELECTED_NODE_DIR"/npm install >"$NPMLOG" 2>&1; then
 fi
 
 # Patch truffle for external compiler invocation
-if ! ./tools/patch-truffle.sh ./test-env-truffle/node_modules/.bin/truffle; then
+if ! ../tools/patch-truffle.sh ./node_modules/.bin/truffle; then
 	echo Error: Cannot patch truffle - aborting setup
 	exit 1
 fi
