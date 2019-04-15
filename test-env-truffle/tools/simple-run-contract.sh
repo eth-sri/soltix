@@ -175,6 +175,16 @@ run_truffle_test() {
 	#	"$EXTERNAL_COMPILER_SCRIPT_PATH" ./contracts ./build
 	#fi
 
+	if test "$OVERRIDE_USE_SOLC_OPTIMIZATION" != ""; then
+		export USE_SOLC_OPTIMIZATION="$OVERRIDE_USE_SOLC_OPTIMIZATION"
+	fi
+	if test "$OVERRIDE_SOLC_OPTIMIZATION_RUNS" != ""; then
+		export SOLC_OPTIMIZATION_RUNS="$OVERRIDE_SOLC_OPTIMIZATION_RUNS"
+	fi
+	if test "$OVERRIDE_SOLC_USE_YUL_OPTIMIZER" != ""; then
+		export SOLC_USE_YUL_OPTIMIZER="$OVERRIDE_SOLC_USE_YUL_OPTIMIZER"
+	fi
+
 	# Explicit truffle compilation step, using solcjs or solc, see truffle-compile.js
 	"$NODEDIR"/node --max-old-space-size=8192 "$TRUFFLE_PATH" compile --network test
 	# Migration step, picking up artifacts without recompilaton
