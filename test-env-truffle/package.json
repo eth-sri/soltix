@@ -5,7 +5,7 @@
   "author": "Nils Weller",
   "license": "MIT",
   "dependencies": {
-    "ganache-cli": "^6.3.0",
-    "truffle": "^5.0.3"
+    "ganache-cli": "^6.4.2",
+    "truffle": "^5.0.12"
   }
 }

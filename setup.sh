@@ -14,6 +14,10 @@
 
 GENERATED_SETTINGS_FILE="settings.cfg.sh"
 
+# Cleanup in case of reinstallation
+rm -rf go-ethereum
+rm -rf test-env-truffle/node_modules
+
 verify_solc_path() {
 	if ! test -x "$SELECTED_COMPILER"; then
 		return 1
@@ -104,10 +108,10 @@ SOLC_VERSION_5="0.5.6"
 USER_INPUT=""
 
 echo The test framework needs a solc compiler binary at least for code parsing.
-echo To compile and run a program, this solc binary can be used as well, or solc-js can be used instead.
+echo To compile and run a program, the same solc binary or solc-js can be used.
 echo
 echo settings.cfg will be generated. It can be used to configure the choice between
-echo solc/solcjs, and the compiler to use binary if needed.
+echo a solc binary and solcjs, optimization settings, and other things.
 echo
 echo Generated code currently always complies with 0.5 language rules and does not use
 echo 0.4 language-specific constructs anymore.
@@ -207,6 +211,76 @@ if ! "$SELECTED_NODE_DIR"/npm install >"$NPMLOG" 2>&1; then
 	echo          If the framework works regardless, this may be ignorable
 fi
 
+# Patch truffle for external compiler invocation
+if ! ../tools/patch-truffle.sh ./node_modules/.bin/truffle; then
+	echo Error: Cannot patch truffle - aborting setup
+	exit 1
+fi
+
+
+# 3. Obtain geth blockchain client if desired
+# TODO install binary package instead?
+# TODO do it.
+# TODO fix ganache support?
+# TODO fix readme
+USER_INPUT=""
+while test "$USER_INPUT" != y && test "$USER_INPUT" != n; do
+	printf "Download and compile geth blockchain backend now (takes a while and requires recent golang)? [y]: " 
+	if test "$USE_DEFAULTS" != yes; then
+		read USER_INPUT
+	fi
+	if test "$USER_INPUT" = ""; then
+		USER_INPUT=y
+	fi
+done
+if test "$USER_INPUT" = y; then
+	cd "$CURDIR"
+
+	# First check local go version.
+	# TODO version check?
+	if ! which go; then
+		# Only advise on installation
+		echo 'Error: cannot find go binary. Binary installation in ./go on Linux'
+		echo '(see also https://golang.org/doc/install#install):'
+		echo 'Run ./tools/golang-setup.sh and then rerun this setup.'
+		if test `uname -s` = Linux && test `uname -m` = x86_64; then # TODO macOS? 
+			USER_INPUT=""
+			GOLANG_DIR="./go"
+			while test "$USER_INPUT" != y && test "$USER_INPUT" != n; do
+				printf "Download and extract golang to '$GOLANG_DIR' directory now? [y]: "
+				if test "$USE_DEFAULTS" != yes; then
+					read USER_INPUT
+				fi
+				if test "$USER_INPUT" = ""; then
+					USER_INPUT=y
+				fi
+			done
+			if ./tools/golang-setup.sh "$GOLANG_DIR"; then
+				export PATH="$PATH:`realpath $GOLANG_DIR/go/bin`"
+			fi
+		fi
+	fi
+
+	if ! which go; then
+		echo 'Aborting geth setup due to lack of go installation'
+	elif ! git clone https://github.com/ethereum/go-ethereum.git; then
+		echo Error: Cannot git clone go-ethereum.git - aborting geth setup
+	else
+		cd go-ethereum
+		if ! ../tools/patch-geth.sh; then
+			echo Error: Cannot patch geth code - aborting geth setup
+		else
+			if ! make all; then
+				echo Error: make all failed - aborting geth setup
+			else
+				cd ..
+				GETH_PATH=`realpath ./go-ethereum/build/bin/geth`
+			fi
+		fi
+	fi
+fi
+
+
 cd "$CURDIR"
 
 
@@ -214,6 +288,10 @@ echo "# use solcjs in truffle (otherwise: invoke external solc binary)?"        
 echo "export USE_SOLCJS=no"                                                                                    >>"$GENERATED_SETTINGS_FILE"
 echo "# if USE_SOLCJS=yes - absolute path of solc binary to use"                                               >>"$GENERATED_SETTINGS_FILE"
 echo "export SOLC_BINARY_PATH=\"$SELECTED_COMPILER\""                                                          >>"$GENERATED_SETTINGS_FILE"
+echo "# blockchain backend to use - ganache or geth?"                                                          >>"$GENERATED_SETTINGS_FILE"
+echo "export BLOCKCHAIN_BACKEND=ganache"                                                                       >>"$GENERATED_SETTINGS_FILE"
+echo "# geth binary path to use if BLOCKCHAIN_BACKEND=geth"                                                    >>"$GENERATED_SETTINGS_FILE"
+echo "export GETH_PATH=\"$GETH_PATH\""                                                                         >>"$GENERATED_SETTINGS_FILE"
 echo "# enable optimization?  will update truffle's  'optimizer { enabled:'  setting   "                       >>"$GENERATED_SETTINGS_FILE"
 echo "export USE_SOLC_OPTIMIZATION=yes"                                                                        >>"$GENERATED_SETTINGS_FILE"
 echo "# if optimizing - how many runs? will update truffle's  'optimizer { runs:'  setting   "                 >>"$GENERATED_SETTINGS_FILE"
