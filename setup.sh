@@ -207,6 +207,13 @@ if ! "$SELECTED_NODE_DIR"/npm install >"$NPMLOG" 2>&1; then
 	echo          If the framework works regardless, this may be ignorable
 fi
 
+# Patch truffle for external compiler invocation
+if ! ./tools/patch-truffle.sh ./test-env-truffle/node_modules/.bin/truffle; then
+	echo Error: Cannot patch truffle - aborting setup
+	exit 1
+fi
+
+
 # 3. Obtain geth blockchain client if desired
 # TODO install binary package instead?
 # TODO do it.

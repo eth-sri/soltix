@@ -422,10 +422,13 @@ run_contract() {
 		# TODO fix this path stuff
 		cp "$INPUT_DIR_RESULT_PATH"/profiling-events.log "$PATH_PROFILING_EVENTS_LOG" 
 		cp "$INPUT_DIR_RESULT_PATH"/TruffleTest.log "$PATH_TRUFFLE_LOG_FILE" 
-		cp "$INPUT_DIR_RESULT_PATH"/TruffleTest.rpc.log "$PATH_TRUFFLE_RPC_LOG_FILE" 
+		case $BLOCKCHAIN_BACKEND in
+			ganache)
+				cp "$INPUT_DIR_RESULT_PATH"/TruffleTest.rpc.log "$PATH_TRUFFLE_RPC_LOG_FILE" 
+				;;
+			# geth: Not needed, $GETH_LOG already holds the current log
+		esac
 
-		cp "$INPUT_DIR_RESULT_PATH"/TruffleTest.log "$PATH_TRUFFLE_LOG_FILE" 
-		cp "$INPUT_DIR_RESULT_PATH"/TruffleTest.rpc.log "$PATH_TRUFFLE_RPC_LOG_FILE" 
 	fi
 
 	if test "$RC" != 0; then

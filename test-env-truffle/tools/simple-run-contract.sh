@@ -168,14 +168,18 @@ run_truffle_test() {
 	mkdir "$DUMMY_MIGRATIONS_DIR" 
 
 
-	if test "$USE_SOLCJS" = yes; then
-		# Use truffle, which will call solcjs internally
-		"$NODEDIR"/node --max-old-space-size=8192 "$TRUFFLE_PATH" compile
-	else
-		"$EXTERNAL_COMPILER_SCRIPT_PATH" ./contracts ./build
-	fi
+	#if test "$USE_SOLCJS" = yes; then
+	#	# Use truffle, which will call solcjs internally
+	#	"$NODEDIR"/node --max-old-space-size=8192 "$TRUFFLE_PATH" compile
+	#else
+	#	"$EXTERNAL_COMPILER_SCRIPT_PATH" ./contracts ./build
+	#fi
 
+	# Explicit truffle compilation step, using solcjs or solc, see truffle-compile.js
+	"$NODEDIR"/node --max-old-space-size=8192 "$TRUFFLE_PATH" compile --network test
+	# Migration step, picking up artifacts without recompilaton
 	"$NODEDIR"/node --max-old-space-size=8192 "$TRUFFLE_PATH" migrate --network test --reset
+	# Test step: run transactions on deployed contract and collect results
 	"$NODEDIR"/node --max-old-space-size=8192 "$TRUFFLE_PATH" test test/test.js --network test --migrations_directory "$DUMMY_MIGRATIONS_DIR" >TruffleTest.log 2>&1
 }
 
@@ -209,17 +213,35 @@ if test -f allFiredEvents; then  # this is only generated in some cases?!
 fi
 mv profiling-events.log "$RESULTDIR"
 mv TruffleTest.log "$RESULTDIR"
-mv TruffleTest.rpc.log "$RESULTDIR"
+case $BLOCKCHAIN_BACKEND in
+	ganache)
+		mv TruffleTest.rpc.log "$RESULTDIR"
+		;;
+	geth)
+		cp "$GETH_LOG" "$RESULTDIR"  
+		;;
+esac
 
 echo Test run complete. Log files:
 echo "      Events     - $PROJDIR/$RESULTDIR/profiling-events.log"
 echo "      truffle    - $PROJDIR/$RESULTDIR/TruffleTest.log"
-echo "      RPC server - $PROJDIR/$RESULTDIR/TruffleTest.rpc.log"
+case $BLOCKCHAIN_BACKEND in
+	ganache)
+		echo "      RPC server - $PROJDIR/$RESULTDIR/TruffleTest.rpc.log"
+		;;
+	geth)
+		echo "      RPC server - $PROJDIR/$RESULTDIR/`basename $GETH_LOG`"
+		;;
+esac
+
 
 # Cleanup
 case $BLOCKCHAIN_BACKEND in
 	ganache)
 		kill $RPC_SERVER_PID
+		;;
+	geth)
+		killall geth
 		;;
 esac
 

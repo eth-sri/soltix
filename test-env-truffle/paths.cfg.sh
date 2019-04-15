@@ -23,3 +23,5 @@ export GETH_KEYSTORE_LIVE="$GETH_DATADIR"/keystore
 
 export TRUFFLE_CONFIG_DIR=`dirname $0`/../truffle-config
 export TRUFFLE_CONFIG_DIR=`realpath $TRUFFLE_CONFIG_DIR`
+export TRUFFLE_EXTERNAL_COMPILE_SCRIPT=`dirname $0`/../tools/external-solc/truffle-compile.js
+export TRUFFLE_EXTERNAL_COMPILE_SCRIPT=`realpath $TRUFFLE_EXTERNAL_COMPILE_SCRIPT`

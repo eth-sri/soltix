@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-var fastCompiler = require('./fast-solc.js');
+var fastCompiler = require('./truffle-compile.js');
 var fs = require('fs');
 
 const testFile = fs.readFileSync(process.argv[2], 'utf8'); 
