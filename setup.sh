@@ -231,7 +231,35 @@ while test "$USER_INPUT" != y && test "$USER_INPUT" != n; do
 done
 if test "$USER_INPUT" = y; then
 	cd "$CURDIR"
-	if ! git clone https://github.com/ethereum/go-ethereum.git; then
+
+	# First check local go version.
+	# TODO version check?
+	if ! which go; then
+		# Only advise on installation
+		echo 'Error: cannot find go binary. Binary installation in ./go on Linux'
+		echo '(see also https://golang.org/doc/install#install):'
+		echo 'Run ./tools/golang-setup.sh and then rerun this setup.'
+		if test `uname -s` = Linux && test `uname -m` = x86_64; then # TODO macOS? 
+			USER_INPUT=""
+			GOLANG_DIR="./go"
+			while test "$USER_INPUT" != y && test "$USER_INPUT" != n; do
+				printf "Download and extract golang to '$GOLANG_DIR' directory now? [y]: "
+				if test "$USE_DEFAULTS" != yes; then
+					read USER_INPUT
+				fi
+				if test "$USER_INPUT" = ""; then
+					USER_INPUT=y
+				fi
+			done
+			if ./tools/golang-setup.sh "$GOLANG_DIR"; then
+				export PATH="$PATH:`realpath $GOLANG_DIR/go/bin`"
+			fi
+		fi
+	fi
+
+	if ! which go; then
+		echo 'Aborting geth setup due to lack of go installation'
+	elif ! git clone https://github.com/ethereum/go-ethereum.git; then
 		echo Error: Cannot git clone go-ethereum.git - aborting geth setup
 	else
 		cd go-ethereum
