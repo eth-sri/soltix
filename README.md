@@ -21,9 +21,11 @@ SOLTIX has found the following two bugs in the `solc` solidity compiler:
 
    2. [Internal compiler error bug](https://github.com/ethereum/solidity/issues/5130): This bug results in an internal compiler error in various solc versions. The bug was fixed in version 0.5.1.
 
+Optimization-related errors have been observed with some [test cases](https://gist.github.com/nweller/f571897ee44a5ada6fd2300e39007edf) on `solc 0.5.0+commit.1d4f565a.Emscripten.clang`. These have not been analyzed in detail, as they no longer occur with more recent versions.
+
 ## 2. Ganache-cli bugs
 
-SOLTIX has also discovered two in `ganache-cli`:
+SOLTIX has also discovered two bugs in `ganache-cli`:
 
    1. [Shift and exponentiation crashes](https://github.com/trufflesuite/ganache-cli/issues/575): The bugs have not been fixed yet.
 
@@ -167,8 +169,8 @@ the Docker image or a native installation. When using Docker, they are started
 with the "docker run" command. Because state is not persisted in the container,
 command sequences such as:
 
-        docker run ./soltix/bin/generate-contract-set.sh ... <output-directory>
-        docker run ./test-env-truffle/bin/run-all-tests.sh <output-directory>
+        docker run soltix ./soltix/bin/generate-contract-set.sh ... <output-directory>
+        docker run soltix ./test-env-truffle/bin/run-all-tests.sh <output-directory>
 
 would normally fail due to the contract set getting purged when the generation
 command ends. In order to address this, a local filesystem directory can be
@@ -213,9 +215,12 @@ information on program execution correctness, particularly for contracts that
 are self-contained due to internal correctness checks - as described below - or to compare
 the behavior of the same contract executed at varying optimization levels.
 
-The generation functions are described below, followed by the execution functions,
-and finally a section on [convenience scripts](#generating-and-executing-contracts) that
+The [generation scripts](#generation) are described below, followed by the [execution scripts](#execution),
+and finally a section on [convenience scripts](#combined-generation-and-execution) that
 combine generation and execution and also enable parallelization with docker.
+
+
+
 
 
 ### Generation
@@ -429,7 +434,7 @@ semantically equivalent transformation using:
 As in the single-contract case, no transformations and optimization testing are
 possible by using a mutations count argument of 0 or "optimize", respectively.
 
-#### Generating and executing contracts
+### Combined generation and execution 
 
 The contract generation and execution steps can be performed with a script that
 combines both steps. For example, to generate and execute a single contract with
@@ -441,9 +446,9 @@ e.g.:
 
         ./tools/generate-and-run-contract.sh 0 10 1 2 20 X --assignmentSequence 0
 
-This will use the generate-contract.sh and run-one-test.sh scripts described below.
+This will use the generate-contract.sh and run-one-test.sh scripts described above.
 An additional script can process contract sets by invoking the generate-contract-set.sh
-and run-all-tests.sh scripts described below, e.g. to generate and execute 5 contracts:
+and run-all-tests.sh scripts described above, e.g. to generate and execute 5 contracts:
 
 	./tools/generate-and-run-contract-set.sh 5 0 10 1 2 20 X --assignmentSequence 0
 
