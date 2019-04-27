@@ -54,6 +54,12 @@ var truffleCompile = function(solcjs, solcStandardInput) {
     // which needs to be adapted for the current settings.cfg.sh settings, and extended with a 
     //      "details": { "yul": true/false } 
     // sub-item to select the optimizer type.
+    const originalOptimizerSettings = JSON.stringify(solcStandardInput.settings, null, 2);
+
+    // truffle as of 5.0.14 no longer even defines the "optimizer" field, so it must be defined before we can alter it.
+    solcStandardInput.settings.optimizer = {};
+    // ...but this is not sufficient to make it work, since there are apparently other incompatible changes in 5.0.14.
+    // We fix the exact version 5.0.12 in package.json for now. TODO fix it or drop truffle
 
     if (process.env.USE_SOLC_OPTIMIZATION == 'yes') {
         solcStandardInput.settings.optimizer.enabled = true;
@@ -75,6 +81,10 @@ var truffleCompile = function(solcjs, solcStandardInput) {
         process.exit(1);
     }
     solcStandardInput.settings.optimizer.details = { "yul": useYULOptimizer };
+
+
+    const adaptedCompilerSettings = JSON.stringify(solcStandardInput.settings, null, 2);
+    console.log(`Compiler settings ${adaptedCompilerSettings}`);
 
     // Now run solcjs or an external solc, depending on the setting
     const stringifiedInput = JSON.stringify(solcStandardInput, null, 2);

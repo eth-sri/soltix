@@ -19,7 +19,8 @@ if ! test -f "$TRUFFLE_FILE"; then
 fi
 
 
-COUNT=`fgrep "$FRAGMENT" node_modules/.bin/truffle | wc -l`
+FRAGMENT="solc.compile(JSON.stringify(solcStandardInput))"
+COUNT=`fgrep "$FRAGMENT" "$TRUFFLE_FILE" | wc -l`
 if test "$COUNT" -lt 1; then
 	echo Error: Cannot find $FRAGMENT in $TRUFFLE_FILE 
 	exit 1

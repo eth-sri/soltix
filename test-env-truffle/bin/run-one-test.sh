@@ -72,7 +72,7 @@ elif grep 'Could not connect to your Ethereum client' "$PATH_TRUFFLE_LOG_FILE" >
 elif ! test -f "$PATH_PROFILING_EVENTS_LOG"; then
 	# This apparently happens if generated contracts become too complex and hit some node/truffle/... limits.
 	# We don't save these cases for now
-	printf FRAMEWORK ERROR: NO EVENTS LOG
+	printf "FRAMEWORK ERROR: NO EVENTS LOG"
 elif grep EXPR_ERROR "$PATH_PROFILING_EVENTS_LOG" >/dev/null; then
 	# Evaluation vs. executon mismatch
 	printf "POSSIBLE BUG: EXPR_ERROR"

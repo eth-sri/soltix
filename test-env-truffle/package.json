@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "solc test framework",
   "author": "Nils Weller",
-  "license": "MIT",
+  "license": "Apache 2.0",
   "dependencies": {
-    "ganache-cli": "^6.4.2",
-    "truffle": "^5.0.12"
+    "ganache-cli": "6.4.2",
+    "truffle": "^5.0.14"
   }
 }
