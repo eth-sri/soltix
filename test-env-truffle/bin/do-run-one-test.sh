@@ -71,12 +71,6 @@ else
 	case $MUTATIONS_COUNT in
 		# Optimization?
 		optimize*)
-			if test "$USE_SOLCJS" = yes; then
-				# TODO Fix this. Due to lack of yul
-				echo Error: Optimization testing with yul is currently unsupported for solcjs - change USE_SOLCJS in settings.cfg.sh to use solc
-				exit 1
-			fi
-
 			# Separate optimize and options in optimize=options
 			OPTIMIZATION_ARGS=`echo $MUTATIONS_COUNT | awk -F= '{print $2}'`
 			MUTATIONS_COUNT=`echo $MUTATIONS_COUNT | awk -F= '{print $1}'`
