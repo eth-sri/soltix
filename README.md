@@ -21,7 +21,7 @@ SOLTIX has found the following two bugs in the `solc` solidity compiler:
 
    2. [Internal compiler error bug](https://github.com/ethereum/solidity/issues/5130): This bug results in an internal compiler error in various solc versions. The bug was fixed in version 0.5.1.
 
-Optimization-related errors have been observed with some [test cases](https://gist.github.com/nweller/f571897ee44a5ada6fd2300e39007edf) on `solc 0.5.0+commit.1d4f565a.Emscripten.clang`. These have not been analyzed in detail, as they no longer occur with more recent versions.
+Optimization-related errors have been observed with some test cases ([1](https://gist.github.com/nweller/08856dccf3cfc7b6883e45c8b92d96a6), [2](https://gist.github.com/nweller/f571897ee44a5ada6fd2300e39007edf)) on `solc 0.5.0+commit.1d4f565a.Emscripten.clang`. These have not been analyzed in detail, as they no longer occur with more recent versions.
 
 ## 2. Ganache-cli bugs
 
