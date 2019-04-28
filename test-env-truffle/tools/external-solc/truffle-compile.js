@@ -42,10 +42,10 @@ var compileFile = function(inputFilePath) {
 /*
  * Invoked from truffle to compile some contract input, taking into account:
  *
- *     - selection of solcjs vs. external binary (if former, compile using passed solcjs handle)
+ *     - selection of solcjs vs. external binary
  *     - optimization setting environment variables as defined in settings.cfg.sh (presumed to have been loaded)
  */
-var truffleCompile = function(solcjs, solcStandardInput) {
+var truffleCompile = function(solcjs/* argument value unused for now */, solcStandardInput) {
     // Adapt optimization settings. We receive something like:
     //     "optimizer": {
     //         "enabled": false,
@@ -60,6 +60,13 @@ var truffleCompile = function(solcjs, solcStandardInput) {
     solcStandardInput.settings.optimizer = {};
     // ...but this is not sufficient to make it work, since there are apparently other incompatible changes in 5.0.14.
     // We fix the exact version 5.0.12 in package.json for now. TODO fix it or drop truffle
+
+    // Use own solcjs version instead of truffle-supplied one
+    const solcjsPath = process.env.EXTERNAL_SOLC_DIR + "/node_modules/solc";
+
+    if (process.env.USE_SOLCJS == 'yes') { // Assume caller has in this case already installed solcjs
+        solcjs = require(solcjsPath);
+    }
 
     if (process.env.USE_SOLC_OPTIMIZATION == 'yes') {
         solcStandardInput.settings.optimizer.enabled = true;
@@ -90,15 +97,18 @@ var truffleCompile = function(solcjs, solcStandardInput) {
     const stringifiedInput = JSON.stringify(solcStandardInput, null, 2);
 
     if (process.env.USE_SOLCJS == 'yes') {
-        console.log("Using solcjs compiler");
-	return solcjs.compile(stringifiedInput);
+        console.log(`Using solcjs compiler ${solcjsPath}`);
+	result = solcjs.compile(stringifiedInput);
     } else if (process.env.USE_SOLCJS == 'no') {
         console.log(`Using external compiler ${process.env.SOLC_BINARY_PATH}`);
-        return compileAndLoadResult(stringifiedInput);
+        result = compileAndLoadResult(stringifiedInput);
     } else {
 	console.log(`Error: Invalid USE_SOLCJS setting in settings.cfg.sh - must be 'yes' or 'no', but is ${process.env.USE_SOLCJS}`);
         process.exit(1);
     }
+    console.log("truffle-compile.js finished");
+    //console.log("result : " + JSON.stringify(result, null, 2));
+    return result;
 }
 
 

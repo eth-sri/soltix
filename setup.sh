@@ -219,10 +219,6 @@ fi
 
 
 # 3. Obtain geth blockchain client if desired
-# TODO install binary package instead?
-# TODO do it.
-# TODO fix ganache support?
-# TODO fix readme
 USER_INPUT=""
 while test "$USER_INPUT" != y && test "$USER_INPUT" != n; do
 	printf "Download and compile geth blockchain backend now (takes a while and requires recent golang)? [y]: " 
@@ -286,7 +282,11 @@ cd "$CURDIR"
 
 echo "# use solcjs in truffle (otherwise: invoke external solc binary)?"                                        >"$GENERATED_SETTINGS_FILE"
 echo "export USE_SOLCJS=no"                                                                                    >>"$GENERATED_SETTINGS_FILE"
-echo "# if USE_SOLCJS=yes - absolute path of solc binary to use"                                               >>"$GENERATED_SETTINGS_FILE"
+# solcjs version - auto-installed
+echo "# if USE_SOLCJS=yes - solcjs version to use (auto-installed, see https://www.npmjs.com/package/solc)"    >>"$GENERATED_SETTINGS_FILE"
+echo "export SOLCJS_VERSION=\"0.5.7\""                                                                         >>"$GENERATED_SETTINGS_FILE"
+# solc binary - needs manual download
+echo "# if USE_SOLCJS=no - absolute path of solc binary to use (see https://github.com/ethereum/solidity/releases for static Linux release binaries)" >>"$GENERATED_SETTINGS_FILE"
 echo "export SOLC_BINARY_PATH=\"$SELECTED_COMPILER\""                                                          >>"$GENERATED_SETTINGS_FILE"
 echo "# blockchain backend to use - ganache or geth?"                                                          >>"$GENERATED_SETTINGS_FILE"
 echo "export BLOCKCHAIN_BACKEND=ganache"                                                                       >>"$GENERATED_SETTINGS_FILE"
@@ -308,7 +308,7 @@ echo "# generate function arguments of struct type? Requires CODEGEN_USE_ABI_ENC
 echo "export CODEGEN_ALLOW_STRUCTS_IN_FUNCTION_ABI=no"                                                        >>"$GENERATED_SETTINGS_FILE"
 echo                                                                                                           >>"$GENERATED_SETTINGS_FILE"
 echo "export NODEDIR=\"${SELECTED_NODE_DIR}\""                                                                 >>"$GENERATED_SETTINGS_FILE"
-echo "export PATH=\"${PWD}/soltix/bin:${PWD}/test-env-truffle/bin:${PWD}/test-env-truffle/tools:${PWD}/tools:$PATH\""         >>"$GENERATED_SETTINGS_FILE"
+echo "export PATH=\"${PWD}/soltix/bin:${PWD}/test-env-truffle/bin:${PWD}/test-env-truffle/tools:${PWD}/test-env-truffle/tools/external-solc:${PWD}/tools:$PATH\""         >>"$GENERATED_SETTINGS_FILE"
 
 
 . ./settings.cfg.sh  # "$GENERATED_SETTINGS_FILE"

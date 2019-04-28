@@ -21,9 +21,10 @@ if ! . "$SETTINGS"; then
 fi
 
 
-. `dirname $0`/../paths.cfg.sh
+export PATHSDIR=`dirname $0`/..
+. "$PATHSDIR"/paths.cfg.sh
 if ! test "$?" = 0; then
-        echo Error: Cannot load `dirname $0`/../paths.cfg.sh
+        echo Error: Cannot load "$PATHSDIR"/paths.cfg.sh
         exit 1
 fi
 

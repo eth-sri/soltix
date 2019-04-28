@@ -39,9 +39,11 @@ if ! . "$SETTINGS"; then
         echo Error: Cannot load settings file $SETTINGS - please run setup.sh
         exit 1
 fi
-. `dirname $0`/../paths.cfg.sh
+
+export PATHSDIR=`dirname $0`/..
+. "$PATHSDIR"/paths.cfg.sh
 if ! test "$?" = 0; then
-        echo Error: Cannot load `dirname $0`/../paths.cfg.sh
+        echo Error: Cannot load "$PATHSDIR"/paths.cfg.sh
         exit 1
 fi
 
@@ -186,6 +188,13 @@ run_truffle_test() {
 	fi
 
 	# Explicit truffle compilation step, using solcjs or solc, see truffle-compile.js
+	if test "$USE_SOLCJS" = yes; then
+		echo Preparing solcjs version "$SOLCJS_VERSION"
+		if ! get-solcjs.sh "$SOLCJS_VERSION"; then
+			echo "Error: Cannot get solcjs version $SOLCJS_VERSION - please adapt settings.cfg.sh as needed"
+			exit 1
+		fi
+	fi
 	"$NODEDIR"/node --max-old-space-size=8192 "$TRUFFLE_PATH" compile --network test
 	# Migration step, picking up artifacts without recompilaton
 	"$NODEDIR"/node --max-old-space-size=8192 "$TRUFFLE_PATH" migrate --network test --reset
