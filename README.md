@@ -85,7 +85,7 @@ generated and how, and how the original equivalence testing technique is integra
 
 # Getting started
 
-The framework can be used in Docker or natively on Linux/macOS systems.
+The framework can be used in Docker or natively on Linux systems.
 
 ## Docker installation
 
@@ -113,10 +113,6 @@ For Ubuntu Linux, the dependencies can be installed with apt-get using the
 commands listed below.
 
 
-g++:
-
-        sudo apt-get install build-essential
-
 Java 8+ (OpenJDK):
 
         sudo apt-get -y install openjdk-8-jdk
@@ -124,6 +120,10 @@ Java 8+ (OpenJDK):
 Maven:
 
         sudo apt-get install maven
+
+git, wget, cmake, build-essential (to auto-fetch and build geth from github):
+
+        sudo apt-get install git wget cmake build-essential
 
 NodeJS:
 
@@ -147,14 +147,21 @@ directory.
 
 ### Build
 
-To build and configure the SOLTIX software, execute the interactive setup 
+To build and configure the SOLTIX software on Linux (macOS is currently
+unsupported natively - use docker instead), execute the interactive setup
 script and answer its questions:
 
         ./setup.sh
 
+Alternatively, to use default values for everything, use:
+
+        ./setup.sh --use-defaults
+
 This will generate a settings.cfg.sh file that contains various configurable
 settings, such as the compiler to be used (solcjs or solc) and its 
-optimization settings.
+optimization settings. Note that ganache-cli and restricted code generation
+options are used by default - switching to geth and enabling more advanced
+features is desirable for many purposes.
 
 ## Use
 
@@ -175,18 +182,19 @@ command sequences such as:
 would normally fail due to the contract set getting purged when the generation
 command ends. In order to address this, a local filesystem directory can be
 mounted as container volume to store contracts - this is also desirable when
-working on test code (log files are unfortunately not available on the host
-yet).
+working on test code.
 
-To store contracts in the host's current working directory ($PWD) and address
+To store contracts in the host's current working directory (in $PWD/TMP) and address
 them from the container by using a "/VOL" prefix, the following example
-commands generate and execute a contract set containing one contract ($PWD/TMP):
+commands generate and execute a contract set containing one contract):
 
         docker run --mount type=bind,source=$PWD,target=/VOL soltix ./soltix/bin/generate-contract-set.sh 1 1 1 1 1 1 /VOL/TMP --complete
         docker run --mount type=bind,source=$PWD,target=/VOL soltix ./test-env-truffle/bin/run-all-tests.sh /VOL/TMP 0
 
 Generated contract sets can automatically be parallelized with docker instances,
 as described in the section on [combined generation and execution](#generating-and-executing-contracts).
+These scripts also remove the necessity of storing intermediate generated contracts
+in a mounted volume.
 
 
 ### Introduction

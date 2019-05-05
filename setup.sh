@@ -7,10 +7,9 @@
 # and an updated $PATH including fast-solc-js 
 #
 # Arguments:
-#    --no-prompt           - no intro prompt
+#    --use-defaults        - use default values instead of interactive questions
 #    --solc-path=<path>    - path to solc binary 
 #    --nodejs-path=<path>  - path to directory containing npm/node to use
-#    --python-path=<path>  - path to dirctory containing python3/pip3 to use
 
 GENERATED_SETTINGS_FILE="settings.cfg.sh"
 
@@ -55,10 +54,10 @@ while test "$#" != 0; do
 			exit 1
 		fi
 	else
-		echo Invalid argument.
-		echo "Supported arguments: --no-prompt"
-		echo "                     --solc-path=..."
-		echo "                     --nodejs-path=..."
+		echo Invalid argument. Available arguments:
+		echo "    --use-defaults        - use default values instead of interactive questions"
+		echo "    --solc-path=<path>    - path to solc binary"
+		echo "    --nodejs-path=<path>  - path to directory containing npm/node to use (must be >v10)"
 		exit 1
 	fi
 	shift
@@ -78,11 +77,9 @@ BUILDLOG="$LOGDIR"/build.log
 if ! cd soltix || ! mvn install >"$BUILDLOG" 2>&1; then
         echo "Error: Could not build soltix. This could indicate that one of the following is missing:"
         echo "      General build tools    -   sudo apt-get install build-essential"
-        echo "      Java SDK 8+            -   sudo apt-add-repository ppa:webupd8team/java"
-        echo "                                 sudo apt-get update"
-        echo "                                 sudo apt-get install oracle-java8-installer"
-        echo "                                 sudo apt-get install oracle-java8-set-default"
+        echo "      Java SDK 8+            -   sudo apt-get install openjdk-8-jdk"
         echo "      Maven                  -   sudo apt-get install maven"
+	echo "See also Dockerfile for dependencies installation."
         echo "See also log output in $BUILDLOG"
         exit 1
 fi
