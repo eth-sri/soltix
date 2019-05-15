@@ -23,6 +23,10 @@ fi
 cd "$TEMP_DIR"
 
 docker rmi -f soltix
+if test -d ../builddeps; then
+	cp -R ../builddeps .
+fi
+
 if ! docker build . -t soltix; then
 	echo Error: docker build failed
 	exit 1

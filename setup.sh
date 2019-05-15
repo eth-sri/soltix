@@ -10,6 +10,11 @@
 #    --use-defaults        - use default values instead of interactive questions
 #    --solc-path=<path>    - path to solc binary 
 #    --nodejs-path=<path>  - path to directory containing npm/node to use
+#
+# If ./builddeps exists, dependencies will be used from it if available:
+#    ./builddeps/go.tgz       - go installation package
+#    ./builddeps/go-ethereum  - cloned geth repository
+#    ./builddeps/solc         - solc binary
 
 GENERATED_SETTINGS_FILE="settings.cfg.sh"
 
@@ -75,12 +80,14 @@ fi
 BUILDLOG="$LOGDIR"/build.log
 
 if ! cd soltix || ! mvn install >"$BUILDLOG" 2>&1; then
+	cat "$BUILDLOG"
+	echo
         echo "Error: Could not build soltix. This could indicate that one of the following is missing:"
         echo "      General build tools    -   sudo apt-get install build-essential"
         echo "      Java SDK 8+            -   sudo apt-get install openjdk-8-jdk"
         echo "      Maven                  -   sudo apt-get install maven"
 	echo "See also Dockerfile for dependencies installation."
-        echo "See also log output in $BUILDLOG"
+        echo "See also log output in $BUILDLOG or above"
         exit 1
 fi
 cd "$CURDIR"
@@ -95,6 +102,7 @@ cd "$CURDIR"
 #fi
 #cd "$CURDIR" 
 
+BUILDDEPS="$PWD/builddeps"
 
 INSTALLED_SOLC=`whereis solc | awk '{print $2}'`
 
@@ -124,13 +132,18 @@ while test "$USER_INPUT" != y && test "$USER_INPUT" != n; do
 done
 
 if test "$USER_INPUT" = y; then
-	echo Downloading default solc compiler binary $SOLC_VERSION_5 ...
-	if ! wget https://github.com/ethereum/solidity/releases/download/v${SOLC_VERSION_5}/solc-static-linux -O solc-${SOLC_VERSION_5} >/dev/null 2>&1; then
-		echo Error: could not download solc compiler binary
-	else
-		INSTALLED_SOLC=$PWD/solc-${SOLC_VERSION_5}
-		chmod +x "$INSTALLED_SOLC"
+	if test -f "$BUILDDEPS"/solc; then
+		echo Using solc from builddeps dir
+		INSTALLED_SOLC="$BUILDDEPS"/solc
+	else	
+		echo Downloading default solc compiler binary $SOLC_VERSION_5 ...
+		if ! wget https://github.com/ethereum/solidity/releases/download/v${SOLC_VERSION_5}/solc-static-linux -O solc-${SOLC_VERSION_5} >/dev/null 2>&1; then
+			echo Error: could not download solc compiler binary
+		else
+			INSTALLED_SOLC=$PWD/solc-${SOLC_VERSION_5}
+		fi
 	fi
+	chmod +x "$INSTALLED_SOLC"
 fi
 
 if ! test -x "$INSTALLED_SOLC"; then
@@ -150,6 +163,10 @@ while test "$SELECTED_COMPILER" = ""; do
 	if test "$USER_INPUT" = ""; then
 		if test "$INSTALLED_SOLC" = ""; then
 			echo Error: You selected the default compiler, but no installed compiler has been found
+			if test "$USE_DEFAULTS" = yes; then
+				echo Aborting installation
+				exit 1
+			fi
 		else
 			SELECTED_COMPILER="$INSTALLED_SOLC"
 		fi
@@ -231,7 +248,11 @@ if test "$USER_INPUT" = y; then
 
 	# First check local go version.
 	# TODO version check?
-	if ! which go; then
+	if test -f "$BUILDDEPS"/go.tgz; then
+		GOLANG_DIR="./go"
+		tar -C "$GOLANG_DIR" -xzf "$BUILDDEPS"/go.tgz 
+		export PATH="$PATH:`realpath $GOLANG_DIR/go/bin`"
+	else if ! which go; then
 		# Only advise on installation
 		echo 'Error: cannot find go binary. Binary installation in ./go on Linux'
 		echo '(see also https://golang.org/doc/install#install):'
@@ -256,9 +277,14 @@ if test "$USER_INPUT" = y; then
 
 	if ! which go; then
 		echo 'Aborting geth setup due to lack of go installation'
-	elif ! git clone https://github.com/ethereum/go-ethereum.git; then
+	elif ! test -d "$BUILDDEPS"/go-ethereum && git clone https://github.com/ethereum/go-ethereum.git; then
 		echo Error: Cannot git clone go-ethereum.git - aborting geth setup
 	else
+		if test -d "$BUILDDEPS"/go-ethereum; then
+			echo Using go-ethereum from builddeps dir
+			cp -R "$BUILDDEPS"/go-ethereum go-ethereum
+		fi
+
 		cd go-ethereum
 		if ! ../tools/patch-geth.sh; then
 			echo Error: Cannot patch geth code - aborting geth setup
