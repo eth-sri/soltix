@@ -252,7 +252,7 @@ if test "$USER_INPUT" = y; then
 		GOLANG_DIR="./go"
 		tar -C "$GOLANG_DIR" -xzf "$BUILDDEPS"/go.tgz 
 		export PATH="$PATH:`realpath $GOLANG_DIR/go/bin`"
-	else if ! which go; then
+	elif ! which go; then
 		# Only advise on installation
 		echo 'Error: cannot find go binary. Binary installation in ./go on Linux'
 		echo '(see also https://golang.org/doc/install#install):'
