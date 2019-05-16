@@ -87,6 +87,10 @@ for c in $CONTRACT_SET; do
 	else
         	SUBPROJNAME=`echo $c | awk -F'/' '{ print $(NF-1) }'`
         	printf "$i of $total: $SUBPROJNAME "
+
+		report-progress.sh progress running $i $total
+
+
 		start_timestamp=`date '+%s'`
 
 		CALLED_BY_RUN_ALL_TESTS=yes run-one-test.sh "$c" $MUTATIONS_COUNT $IS_GENERATED_SET >summary.log
@@ -106,6 +110,9 @@ for c in $CONTRACT_SET; do
 
 		printf "`cat summary.log`"
 
+
+		# TODO report proper result
+		report-progress.sh progress "done" $i $total ok
 
 
 		rm -f "${DIR}/${SUBPROJNAME}"/TruffleTest.log

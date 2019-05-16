@@ -21,6 +21,10 @@ if ! git clone "$SOURCE_REPO" "$TEMP_DIR"; then
 	exit 1
 fi
 cd "$TEMP_DIR"
+if ! git checkout "$BRANCH_NAME"; then
+	echo Error: Cannot checkout branch $BRANCH_NAME
+	exit 1
+fi
 
 docker rmi -f soltix
 if test -d ../builddeps; then

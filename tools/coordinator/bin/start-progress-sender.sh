@@ -8,6 +8,6 @@ if ! test -f "$SENDER_JAR"; then
 	exit 1
 fi
 
-"$JAVA_HOME"/bin/java -jar "$SENDER_JAR" "$@"
+java -jar "$SENDER_JAR" "$@"
 
 

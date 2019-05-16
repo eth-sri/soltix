@@ -92,6 +92,13 @@ if ! cd soltix || ! mvn install >"$BUILDLOG" 2>&1; then
 fi
 cd "$CURDIR"
 
+echo Building tools...
+cd tools/coordinator
+if ! mvn install >/dev/null 2>&1; then
+	echo Error: cannot build coordination tools for cloud processing
+	echo Proceeding anyway...
+fi
+cd "$CURDIR"
 
 #echo Building helper tools...
 #MAKELOG="$LOGDIR"/tools.log
@@ -282,6 +289,7 @@ if test "$USER_INPUT" = y; then
 	else
 		if test -d "$BUILDDEPS"/go-ethereum; then
 			echo Using go-ethereum from builddeps dir
+			rm -rf go-ethereum
 			cp -R "$BUILDDEPS"/go-ethereum go-ethereum
 		fi
 
@@ -331,7 +339,7 @@ echo "# generate function arguments of struct type? Requires CODEGEN_USE_ABI_ENC
 echo "export CODEGEN_ALLOW_STRUCTS_IN_FUNCTION_ABI=no"                                                        >>"$GENERATED_SETTINGS_FILE"
 echo                                                                                                           >>"$GENERATED_SETTINGS_FILE"
 echo "export NODEDIR=\"${SELECTED_NODE_DIR}\""                                                                 >>"$GENERATED_SETTINGS_FILE"
-echo "export PATH=\"${PWD}/soltix/bin:${PWD}/test-env-truffle/bin:${PWD}/test-env-truffle/tools:${PWD}/test-env-truffle/tools/external-solc:${PWD}/tools:$PATH\""         >>"$GENERATED_SETTINGS_FILE"
+echo "export PATH=\"${PWD}/soltix/bin:${PWD}/test-env-truffle/bin:${PWD}/test-env-truffle/tools:${PWD}/test-env-truffle/tools/external-solc:${PWD}/tools:${PWD}/tools/coordinator/bin:$PATH\""         >>"$GENERATED_SETTINGS_FILE"
 
 
 . ./settings.cfg.sh  # "$GENERATED_SETTINGS_FILE"

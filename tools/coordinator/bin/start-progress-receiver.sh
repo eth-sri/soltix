@@ -7,5 +7,5 @@ if ! test -f "$RECEIVER_JAR"; then
 	exit 1
 fi
 
-"$JAVA_HOME"/bin/java -jar "$RECEIVER_JAR" "$@"
+java -jar "$RECEIVER_JAR" "$@"
 
