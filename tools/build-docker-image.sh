@@ -31,7 +31,7 @@ if test -d ../builddeps; then
 	cp -R ../builddeps .
 fi
 
-if ! docker build . -t soltix; then
+if ! docker build --no-cache . -t soltix; then
 	echo Error: docker build failed
 	exit 1
 fi

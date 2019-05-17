@@ -72,7 +72,7 @@ start_instance_local() {
 		soltix \
 		"$SCRIPT_PATH" \
 		$CONTRACT_COUNT $SEED $FUNCTION_COUNT $STMT_LOWER_BOUND $STMT_UPPER_BOUND $VARIABLE_COUNT $CONTRACT_DIR_CONTAINER/$INSTANCE $CONTRACT_TYPE $RUN_MODE \
-		) >"$REDIR_FILE"   # 2>&1   &
+		) >"$REDIR_FILE"   2>&1   &
 }
 
 start_instance() {

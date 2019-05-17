@@ -1,5 +1,6 @@
 FROM ubuntu:18.10
 
+RUN rm /var/lib/apt/lists/* -vf
 RUN apt-get update && apt-get dist-upgrade -y
 
 RUN apt-get -y install wget
@@ -10,7 +11,7 @@ RUN npm install -g n
 RUN n stable
 
 # TODO document openjdk usage
-RUN apt-get -y install openjdk-8-jdk
+RUN apt-get -y install --fix-missing openjdk-11-jdk
 RUN apt-get -y install maven
 
 WORKDIR /soltix
