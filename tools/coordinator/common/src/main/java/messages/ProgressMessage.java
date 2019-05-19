@@ -34,9 +34,10 @@ public class ProgressMessage extends Message {
     public enum CaseOutcome {
         NONE("none"),
         OK("ok"),
-        EXPR_ERROR("expr"),
-        EVENT_ERROR("event"),
-        OTHER_ERROR("other");
+        EXPR_ERROR("bug-candidate-expr"),   // unexpected expression result - bug in solc or soltix or blockchain client
+        EVENT_ERROR("bug-candidate-event"), // unexpected event result - bug in solc or soltix or blockchain client
+        INVALID_OPCODE("invalid-opcode"),   // invalid opcode - bug in solc/soltix/blockchain client or bad random transaction data for externally supplied contract (not a bug)
+        OTHER_ERROR("other-error");
 
         private String name;
 

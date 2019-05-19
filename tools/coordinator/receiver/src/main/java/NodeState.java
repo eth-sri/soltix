@@ -4,7 +4,13 @@ public class NodeState {
     private ProgressMessage lastProgressMessage;
     private long lastMessageTimestamp = 0;
     private long lastMessageDuration = 0;
+    private long totalProcessingDuration = 0;
     private boolean offline = false;
+    private int zeroBasedNodeId;
+
+    public NodeState(int zeroBasedNodeId) {
+        this.zeroBasedNodeId = zeroBasedNodeId;
+    }
 
     public void setOffline(boolean offline) {
         this.offline = offline;
@@ -18,6 +24,7 @@ public class NodeState {
         lastProgressMessage = progressMessage;
         long timestamp = System.currentTimeMillis() / 1000;
         lastMessageDuration = lastMessageTimestamp != 0? timestamp - lastMessageTimestamp: 0;
+        totalProcessingDuration += lastMessageDuration;
         lastMessageTimestamp = timestamp;
     }
 
@@ -31,15 +38,34 @@ public class NodeState {
         }
     }
 
-    public String toString() {
+    public String toStringKeepingState() {
+        String baseString = zeroBasedNodeId + ": ";
+        String caseString = lastProgressMessage != null? lastProgressMessage.getCurrentCase() + "/" + lastProgressMessage.getTotalCases(): null;
         if (lastProgressMessage == null) {
-            return "ONLINE";
+            return baseString + "ONLINE";
         } else if (lastProgressMessage.getCaseState() == ProgressMessage.CaseState.RUNNING) {
-            return lastProgressMessage.getCurrentCase() + " / " + lastProgressMessage.getTotalCases(); // indicate time? may clutter output though
+            return baseString + caseString + "..."; // indicate time? may clutter output though
         } else if (lastProgressMessage.getCaseState() == ProgressMessage.CaseState.DONE) {
-            return lastProgressMessage.getCaseOutcome().getName().toUpperCase() + " " + durationString(lastMessageDuration);
+            return baseString + caseString + " - "
+                    + lastProgressMessage.getCaseOutcome().getName().toUpperCase()
+                    + "  (" + durationString(lastMessageDuration)
+                    +       ", total " + durationString(totalProcessingDuration)
+                    +       ", eta " + durationString((long)((totalProcessingDuration/lastProgressMessage.getCurrentCase())+0.5)*(lastProgressMessage.getTotalCases()-lastProgressMessage.getCurrentCase()))
+                    + ")";
         } else {
-            return "unknown state " + lastProgressMessage.getCaseState().getName();
+            return baseString + "unknown state " + lastProgressMessage.getCaseState().getName();
         }
+    }
+
+    public boolean haveNotableState() {
+        // Only final results are considered notable for now
+        // TODO exceptions when generating contracts, hang-ups, ...
+        return lastProgressMessage != null && lastProgressMessage.getCaseOutcome() != ProgressMessage.CaseOutcome.NONE;
+    }
+
+    public String toStringRemovingState() {
+        String result = toStringKeepingState();
+        lastProgressMessage = null;
+        return result;
     }
 }

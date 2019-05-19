@@ -45,7 +45,7 @@ public class Main {
             } else {
                 System.out.println("Error: Unknown message type received " + message.getClass().toString());
             }
-            printState();
+            printState(message.getZeroBasedSenderId());
             if (allNodesDone()) { // TODO add timeout
                 System.out.println("All done - terminating.");
                 break;
@@ -61,7 +61,7 @@ public class Main {
             } else if (nodeStates[message.getZeroBasedSenderId()] != null) {
                 fatal("Unexpected status: repeated 'on' message for sender " + message.getZeroBasedSenderId());
             }
-            nodeStates[message.getZeroBasedSenderId()] = new NodeState();
+            nodeStates[message.getZeroBasedSenderId()] = new NodeState(message.getZeroBasedSenderId());
         } else if (message.getStatus() == StatusMessage.Status.OFF) {
             if (message.getZeroBasedSenderId() >= nodeStates.length) {
                 fatal("Unexpected status sender ID value - too high, " + message.getZeroBasedSenderId());
@@ -77,7 +77,7 @@ public class Main {
     }
 
     protected static void evaluateProgressMessage(ProgressMessage message) {
-        System.out.println(message.serialize());
+        //System.out.println(message.serialize());
         if (message.getZeroBasedSenderId() >= nodeStates.length) {
             fatal("Unexpected progress sender ID value - too high, " + message.getZeroBasedSenderId());
         } else if (nodeStates[message.getZeroBasedSenderId()] == null) {
@@ -88,20 +88,28 @@ public class Main {
         nodeStates[message.getZeroBasedSenderId()].update(message);
     }
 
-    protected static void printState() {
-        for (int i = 0; i < nodeStates.length; ++i) {
-            String nodeText;
-            if (nodeStates[i] == null) {
-                nodeText = "OFFLINE";
-            } else {
-                nodeText = nodeStates[i].toString();
-            }
+    protected static void printState(int zeroBasedUpdatedNodeId) {
+        boolean printAll = false;
 
-            String fullText = "" + i + ": " + nodeText;
-            String paddedText = String.format("%-15s", fullText);
-            System.out.print(paddedText);
+        if (printAll) { // Show all node states all the time - probably too verbose
+            for (int i = 0; i < nodeStates.length; ++i) {
+                String nodeText;
+                if (nodeStates[i] == null) {
+                    nodeText = "OFFLINE";
+                } else {
+                    nodeText = nodeStates[i].toStringKeepingState();
+                }
+
+                String fullText = "" + i + ": " + nodeText;
+                String paddedText = String.format("%-15s", fullText);
+                System.out.println(paddedText);
+            }
+        } else { // Update current item, and only do so for results
+            if (nodeStates[zeroBasedUpdatedNodeId].haveNotableState()) {
+                String nodeText = nodeStates[zeroBasedUpdatedNodeId].toStringRemovingState(); // output once, then remove to avoid redundant updates
+                System.out.println(nodeText);
+            }
         }
-        System.out.println("");
     }
 
     protected static boolean allNodesDone() {
