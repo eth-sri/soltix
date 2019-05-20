@@ -64,7 +64,7 @@ else
 		echo "Error: Settings overlay file $SETTINGS_OVERLAY does not exist (use 'none' if no settings overlay is desired)"
 		exit 1
 	fi
-	SETTINGS_OVERLAY_ARGUMENT="-e `realpath $SETTINGS_OVERLAY`"
+	SETTINGS_OVERLAY_ARGUMENT="--env-file `realpath $SETTINGS_OVERLAY`"
 fi
 
 

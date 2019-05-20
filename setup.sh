@@ -257,6 +257,9 @@ if test "$USER_INPUT" = y; then
 	# TODO version check?
 	if test -f "$BUILDDEPS"/go.tgz; then
 		GOLANG_DIR="./go"
+		if ! test -d "$GOLANG_DIR"; then
+			mkdir "$GOLANG_DIR"
+		fi
 		tar -C "$GOLANG_DIR" -xzf "$BUILDDEPS"/go.tgz 
 		export PATH="$PATH:`realpath $GOLANG_DIR/go/bin`"
 	elif ! which go; then
