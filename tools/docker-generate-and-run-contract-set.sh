@@ -53,7 +53,8 @@ fi
 
 mkdir "$CONTRACT_DIR_HOST"
 
-SCRIPT_PATH="./tools/generate-and-run-contract-set.sh"
+EXECUTOR_SCRIPT_PATH="./tools/generate-and-run-contract-set.sh"
+COORDINATOR_SCRIPT_PATH="./tools/coordinator/bin/start-progress-receiver.sh"
 
 CONTRACT_DIR_CONTAINER="/VOL"
 
@@ -68,6 +69,9 @@ else
 fi
 
 
+# Obtain host IP as coordinator address
+COORDINATOR_HOST_IP=`ip -4 addr show docker0 | grep inet | awk -F/ '{print $1}' | awk '{print $2}'`
+
 start_instance_local() {
 	INSTANCE_NAME=soltix$INSTANCE
 	ALL_INSTANCE_NAMES="$ALL_INSTANCE_NAMES $INSTANCE_NAME"
@@ -75,27 +79,37 @@ start_instance_local() {
 
 	docker rm -f $INSTANCE_NAME  >/dev/null 2>&1
 
-	# Obtain host IP as coordinator address
-	HOST_IP=`ip -4 addr show docker0 | grep inet | awk -F/ '{print $1}' | awk '{print $2}'`
 
 	echo docker run --name soltix$INSTANCE --mount type=bind,source="`realpath $CONTRACT_DIR_HOST`",target=/VOL \
-		-e SOLTIX_COORDINATOR_HOST=$HOST_IP -e SOLTIX_NODE_ID=$INSTANCE $SETTINGS_OVERLAY_ARGUMENT \
+		-e SOLTIX_COORDINATOR_HOST=$COORDINATOR_HOST_IP -e SOLTIX_NODE_ID=$INSTANCE $SETTINGS_OVERLAY_ARGUMENT \
 		soltix \
-		"$SCRIPT_PATH" \
+		"$EXECUTOR_SCRIPT_PATH" \
 		$CONTRACT_COUNT $SEED $FUNCTION_COUNT $STMT_LOWER_BOUND $STMT_UPPER_BOUND $VARIABLE_COUNT $CONTRACT_DIR_CONTAINER/$INSTANCE $CONTRACT_TYPE $RUN_MODE
 
 
 
 	(sleep 10 ; docker run --name soltix$INSTANCE --mount type=bind,source="`realpath $CONTRACT_DIR_HOST`",target=/VOL \
-		-e SOLTIX_COORDINATOR_HOST=$HOST_IP -e SOLTIX_NODE_ID=$INSTANCE $SETTINGS_OVERLAY_ARGUMENT \
+		-e SOLTIX_COORDINATOR_HOST=$COORDINATOR_HOST_IP -e SOLTIX_NODE_ID=$INSTANCE $SETTINGS_OVERLAY_ARGUMENT \
 		soltix \
-		"$SCRIPT_PATH" \
+		"$EXECUTOR_SCRIPT_PATH" \
 		$CONTRACT_COUNT $SEED $FUNCTION_COUNT $STMT_LOWER_BOUND $STMT_UPPER_BOUND $VARIABLE_COUNT $CONTRACT_DIR_CONTAINER/$INSTANCE $CONTRACT_TYPE $RUN_MODE \
 		) >"$REDIR_FILE"   2>&1   &
 }
 
 start_instance() {
 	start_instance_local
+}
+
+
+start_coordinator_local() {
+	INSTANCE_NAME=soltix-coordinator
+	docker rm -f $INSTANCE_NAME  >/dev/null 2>&1
+echo    docker run -p "$COORDINATOR_HOST_IP":22732:22732/tcp --name $INSTANCE_NAME $SETTINGS_OVERLAY_ARGUMENT soltix "$COORDINATOR_SCRIPT_PATH" "$DOCKER_COUNT"
+	docker run -p "$COORDINATOR_HOST_IP":22732:22732/tcp --name $INSTANCE_NAME $SETTINGS_OVERLAY_ARGUMENT soltix "$COORDINATOR_SCRIPT_PATH" "$DOCKER_COUNT"
+}
+
+start_coordinator() {
+	start_coordinator_local
 }
 
 
@@ -109,8 +123,8 @@ while test "$i" -lt "$DOCKER_COUNT"; do
 	i=`expr $i + 1`
 done
 
+start_coordinator
 
-start-progress-receiver.sh $DOCKER_COUNT
 
 echo waiting on docker jobs $ALL_INSTANCE_NAMES 
 docker wait $ALL_INSTANCE_NAMES 
