@@ -5,6 +5,7 @@ import org.apache.kafka.clients.producer.*;
 import org.apache.kafka.common.serialization.LongSerializer;
 import org.apache.kafka.common.serialization.StringSerializer;
 import org.apache.zookeeper.data.Stat;
+import scala.collection.parallel.ParIterableLike;
 
 import java.util.Properties;
 
@@ -107,7 +108,7 @@ public class Main {
         } else { // Update current item, and only do so for results
             if (nodeStates[zeroBasedUpdatedNodeId].haveNotableState()) {
                 String nodeText = nodeStates[zeroBasedUpdatedNodeId].toStringRemovingState(); // output once, then remove to avoid redundant updates
-                System.out.println(nodeText);
+                System.out.println(nodeText + "      [total: " + computeStats() + "]");
             }
         }
     }
@@ -119,5 +120,36 @@ public class Main {
             }
         }
         return true;
+    }
+
+    protected static String computeStats() {
+        String result = "";
+        long highestETA = 0;
+        long lowestETA = Long.MAX_VALUE;
+        long highestCompletedCases = 0;
+        long totalCases = 0;
+
+        for (int i = 0; i < nodeStates.length; ++i) {
+            if (nodeStates[i] != null) {
+                long lastETA = nodeStates[i].getLastETA();
+                if (lastETA != 0) { // have ETA
+                    if (lastETA < lowestETA) {
+                        lowestETA = lastETA;
+                    }
+                    if (lastETA > highestETA) {
+                        highestETA = lastETA;
+                    }
+                }
+
+                int completedCases = nodeStates[i].getLastCompletedCase();
+                assert(totalCases == 0 || totalCases == nodeStates[i].getTotalCases());
+                totalCases = nodeStates[i].getTotalCases();
+                if (completedCases > highestCompletedCases) {
+                    highestCompletedCases = completedCases;
+                }
+            }
+        }
+        return "eta min: " + NodeState.durationString(lowestETA) + ", max: " + NodeState.durationString(highestETA)
+                + "done max: " + highestCompletedCases + " of " + totalCases;
     }
 }

@@ -51,6 +51,7 @@ i=1
 while test "$i" -le "$CONTRACT_COUNT"; do
 	printf "Generating $i of $CONTRACT_COUNT (seed $PRNG_SEED) ... "
 
+
 #	mkdir -p "$TEMPDIR"
 
 	if ! generate-contract.sh "$PRNG_SEED" "$FUNCTION_COUNT" "$ASSIGNMENTS_LOWER_BOUND" "$ASSIGNMENTS_UPPER_BOUND" "$VARIABLE_COUNT" "$TEMPDIR" "$MODE" >/dev/null 2>&1; then
@@ -66,7 +67,12 @@ exit 1
 	PRNG_SEED=`expr $PRNG_SEED + 1`
 
 	MD5=`md5sum "$TEMP_CONTRACT_FILE" | awk '{print $1}'`
+
 	printf "$MD5 - "
+
+	report-progress.sh progress generating $i $CONTRACT_COUNT $MD5
+
+
 	SAVEDIR="$DIRECTORY/$MD5"
 	if test -d "$SAVEDIR"; then
 		echo COLLISION

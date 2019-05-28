@@ -7,8 +7,8 @@ usage() {
 	echo
 	echo "Supply"
 	echo "    - local/gcloud execution selection"
-	echo "    - docker instance count"
 	echo "    - maximum duration (cap cloud processing costs in advance in case things go wrong)"
+	echo "    - docker instance count"
 	echo "    - settings.cfg.sh overlay file path (defining environment variables that will override settings.cfg.sh variables in container)"
 	echo "    - followed by code generation arguments (in generate-contract-set.sh format)"
 	echo "    - followed by execution arguments (in run-all-tests.sh format):"
@@ -59,6 +59,8 @@ shift 9
 
 CONTRACT_TYPE=$1
 RUN_MODE="$2"
+
+echo Instance count $DOCKER_COUNT
 
 
 if test "$DOCKER_LOGDIR" = ""; then
@@ -152,9 +154,24 @@ follow_coordinator_local() {
 
 ###################################################################################################
 ########################################### Cloud variant #########################################
-###################################################################################################
+#############
+######################################################################################
 
 GCLOUD_ZONE=europe-west1-b
+
+# default:
+#	n1-standard-1
+# see:
+#	gcloud compute machine-types list | grep europe-west1-b
+# and
+#	https://cloud.google.com/compute/pricing#machinetype
+#
+# ./tools/docker-generate-and-run-contract-set.sh local 600 1 settings-overlay.cfg.sh 5 1 10 1 10 40 X --assignmentSequence  0 
+#    n1-standard-1: avg ca. 30s/case
+#    n1-standard-2: avg ca. 28s/case
+#    n1-highcpu-2:  avg ca. 30s/case 
+#    n1-highmem-2:  avg ca. 30s/case
+MACHINE_TYPE=n1-standard-1
 
 do_start_instance_gcloud() {
 	INSTANCE_NUMBER="$1"  # only meaningful for worker nodes
@@ -176,7 +193,7 @@ do_start_instance_gcloud() {
 		shift 1
 	done
 
-	echo        gcloud compute instances create-with-container "$INSTANCE_NAME" --zone=europe-"$GCLOUD_ZONE" --container-image eu.gcr.io/soltix/soltix \
+	echo        gcloud compute instances create-with-container "$INSTANCE_NAME" --zone=europe-"$GCLOUD_ZONE" --machine-type="$MACHINE_TYPE" --container-image eu.gcr.io/soltix/soltix \
                 --container-restart-policy never \
                 $SETTINGS_OVERLAY_ARGUMENT \
 		$COORDINATOR_COMM_ARGS \
@@ -186,7 +203,7 @@ do_start_instance_gcloud() {
 	#   - overlay argument may be empty
 	#   - arglist may expand to multiple arguments
 	#   - the docker instance will use the host's network stack, so the coordinator port need not be exported
-	gcloud compute instances create-with-container "$INSTANCE_NAME" --zone="$GCLOUD_ZONE" --container-image eu.gcr.io/soltix/soltix \
+	gcloud compute instances create-with-container "$INSTANCE_NAME" --zone="$GCLOUD_ZONE" --machine-type="$MACHINE_TYPE" --container-image eu.gcr.io/soltix/soltix \
         	--container-restart-policy never \
 		$SETTINGS_OVERLAY_ARGUMENT \
 		$COORDINATOR_COMM_ARGS \

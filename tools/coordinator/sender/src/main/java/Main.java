@@ -3,10 +3,11 @@ import messages.StatusMessage;
 
 public class Main {
     protected static void usage() {
-        System.out.println("Usage: coordinator [kafka-address] [own-id] status on");
-        System.out.println("       coordinator [kafka-address] [own-id] status off");
-        System.out.println("       coordinator [kafka-address] [own-id] progress running [cur-case] [total-cases]");
-        System.out.println("       coordinator [kafka-address] [own-id] progress done [cur-case] [total-cases] [ok|expr_error|event_error|other_error]");
+        System.out.println("Usage: sender [coordinator-host] [own-id] status on");
+        System.out.println("       sender [coordinator-host] [own-id] status off");
+        System.out.println("       sender [coordinator-host] [own-id] progress generating [cur-case] [total-cases] [case-id]");
+        System.out.println("       sender [coordinator-host] [own-id] progress running [cur-case] [total-cases] [case-id]");
+        System.out.println("       sender [coordinator-host] [own-id] progress done [cur-case] [total-cases] [case-id] [ok|expr_error|event_error|other_error]");
         System.exit(1);
     }
 
@@ -32,14 +33,15 @@ public class Main {
             // pertinent to case x of y
             int curCase = Integer.parseInt(args[4]);
             int totalCases = Integer.parseInt(args[5]);
+            String caseId = args[6];
 
             // elaborate on result if done
             ProgressMessage.CaseOutcome outcome = ProgressMessage.CaseOutcome.NONE;
             if (state == ProgressMessage.CaseState.DONE) {
-                outcome = ProgressMessage.CaseOutcome.fromName(args[6]);
+                outcome = ProgressMessage.CaseOutcome.fromName(args[7]);
             }
 
-            ProgressMessage message = new ProgressMessage(senderId, curCase, totalCases, state, outcome);
+            ProgressMessage message = new ProgressMessage(senderId, curCase, totalCases, caseId, state, outcome);
             serializedMessage = message.serialize();
         } else {
             System.out.println("Error: Unknown message type '" + messageType + "'");

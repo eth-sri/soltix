@@ -5,11 +5,13 @@ public class ProgressMessage extends Message {
 
     private int currentCase = 0;
     private int totalCases = 0;
+    private String caseId = null;
     private CaseState caseState = CaseState.NONE;
     private CaseOutcome caseOutcome = CaseOutcome.NONE;
 
     public enum CaseState {
         NONE("none"),
+        GENERATING("generating"),
         RUNNING("running"),
         DONE("done");
 
@@ -58,10 +60,11 @@ public class ProgressMessage extends Message {
     }
 
 
-    public ProgressMessage(int senderId, int currentCase, int totalCases, CaseState caseState, CaseOutcome caseOutcome) throws Exception {
+    public ProgressMessage(int senderId, int currentCase, int totalCases, String caseId, CaseState caseState, CaseOutcome caseOutcome) throws Exception {
         super(senderId);
         this.currentCase = currentCase;
         this.totalCases = totalCases;
+        this.caseId = caseId;
         this.caseState = caseState;
         this.caseOutcome = caseOutcome;
     }
@@ -70,11 +73,12 @@ public class ProgressMessage extends Message {
     public CaseOutcome getCaseOutcome() { return caseOutcome; }
     public int getCurrentCase() { return currentCase; }
     public int getTotalCases() { return totalCases; }
+    public String getCaseIdString() { return caseId; }
 
     @Override
     public String serialize() {
         String result;
-        result = senderId + " " + MESSAGE_NAME + " " + currentCase + " " + totalCases + " " + caseState.name;
+        result = senderId + " " + MESSAGE_NAME + " " + currentCase + " " + totalCases + " " + caseId + " " + caseState.name;
         if (caseState == CaseState.DONE) {
             result += " " + caseOutcome.name;
         }

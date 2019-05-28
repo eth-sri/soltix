@@ -88,7 +88,13 @@ for c in $CONTRACT_SET; do
         	SUBPROJNAME=`echo $c | awk -F'/' '{ print $(NF-1) }'`
         	printf "$i of $total: $SUBPROJNAME "
 
-		report-progress.sh progress running $i $total
+		if test -d "$c"; then
+			# Generated contract dir
+			MD5=`cat $c/md5`
+		else
+			MD5=00000000000000000000000000000000
+		fi
+		report-progress.sh progress running $i $total $MD5
 
 
 		start_timestamp=`date '+%s'`

@@ -21,26 +21,33 @@ public class MessageDeserializer {
         } else if (components[1].equals(ProgressMessage.MESSAGE_NAME)) {
             int currentCase = Integer.parseInt(components[2]);
             int totalCases = Integer.parseInt(components[3]);
+            String caseId = components[4];
             ProgressMessage.CaseState caseState = ProgressMessage.CaseState.NONE;
             ProgressMessage.CaseOutcome caseOutcome = ProgressMessage.CaseOutcome.NONE;
 
-            if (components[4].equals("running")) {
-                // case <cur> <total> running             later: [...extra-info...]
-                caseState = ProgressMessage.CaseState.RUNNING;
-                if (components.length != 5) {
-                    throw new Exception("Unexpected case running component count " + components.length);
-                }
-            } else if (components[4].equals("done")) {
-                // case <cur> <total> done [ok|expr-error|event-error|other]
-                caseState = ProgressMessage.CaseState.DONE;
+            if (components[5].equals("generating")) {
+                // case <cur> <total> <caseid> generating             later: [...extra-info...]
+                caseState = ProgressMessage.CaseState.GENERATING;
                 if (components.length != 6) {
                     throw new Exception("Unexpected case running component count " + components.length);
                 }
-                caseOutcome = ProgressMessage.CaseOutcome.fromName(components[5]);
+            } else if (components[5].equals("running")) {
+                // case <cur> <total> <caseid> running             later: [...extra-info...]
+                caseState = ProgressMessage.CaseState.RUNNING;
+                if (components.length != 6) {
+                    throw new Exception("Unexpected case running component count " + components.length);
+                }
+            } else if (components[5].equals("done")) {
+                // case <cur> <total> <caseid> done [ok|expr-error|event-error|other]
+                caseState = ProgressMessage.CaseState.DONE;
+                if (components.length != 7) {
+                    throw new Exception("Unexpected case running component count " + components.length);
+                }
+                caseOutcome = ProgressMessage.CaseOutcome.fromName(components[6]);
             } else {
-                throw new Exception("Unexpected case state '" + components[4] + "'");
+                throw new Exception("Unexpected case state '" + components[5] + "'");
             }
-            return new ProgressMessage(senderId, currentCase, totalCases, caseState, caseOutcome);
+            return new ProgressMessage(senderId, currentCase, totalCases, caseId, caseState, caseOutcome);
         } else {
             throw new Exception("Received unknown message '" + components[1]);
         }
