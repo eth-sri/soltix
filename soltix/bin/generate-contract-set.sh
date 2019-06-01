@@ -64,12 +64,13 @@ exit 1
 		# exit 1
 	fi
 
+
+	MD5=`md5sum "$TEMP_CONTRACT_FILE" | awk '{print $1}'`
+
 	report-progress.sh progress generating $i $CONTRACT_COUNT $MD5
 
 	i=`expr $i + 1`
 	PRNG_SEED=`expr $PRNG_SEED + 1`
-
-	MD5=`md5sum "$TEMP_CONTRACT_FILE" | awk '{print $1}'`
 
 	printf "$MD5 - "
 
