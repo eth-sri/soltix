@@ -116,7 +116,7 @@ for c in $CONTRACT_SET; do
 
 		printf "`cat summary.log`"
 
-		report-progress.sh progress "done" $i $total "`cat progress-summary.log`"
+		report-progress.sh progress "done" $i $total $MD5 "`cat progress-summary.log`"
 
 
 		rm -f "${DIR}/${SUBPROJNAME}"/TruffleTest.log

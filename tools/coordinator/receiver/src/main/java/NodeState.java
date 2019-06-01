@@ -72,6 +72,8 @@ public class NodeState {
 
         if (lastProgressMessage == null) {
             return baseString + "ONLINE";
+        } else if (lastProgressMessage.getCaseState() == ProgressMessage.CaseState.GENERATING) {
+            return baseString + caseString +" - GENERATED";
         } else if (lastProgressMessage.getCaseState() == ProgressMessage.CaseState.RUNNING) {
             return baseString + caseString + "..."; // indicate time? may clutter output though
         } else if (lastProgressMessage.getCaseState() == ProgressMessage.CaseState.DONE) {

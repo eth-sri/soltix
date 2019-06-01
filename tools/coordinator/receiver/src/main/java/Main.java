@@ -78,7 +78,7 @@ public class Main {
     }
 
     protected static void evaluateProgressMessage(ProgressMessage message) {
-        //System.out.println(message.serialize());
+       // System.out.println(message.serialize());
         if (message.getZeroBasedSenderId() >= nodeStates.length) {
             fatal("Unexpected progress sender ID value - too high, " + message.getZeroBasedSenderId());
         } else if (nodeStates[message.getZeroBasedSenderId()] == null) {
@@ -132,6 +132,7 @@ public class Main {
         for (int i = 0; i < nodeStates.length; ++i) {
             if (nodeStates[i] != null) {
                 long lastETA = nodeStates[i].getLastETA();
+
                 if (lastETA != 0) { // have ETA
                     if (lastETA < lowestETA) {
                         lowestETA = lastETA;
@@ -149,7 +150,8 @@ public class Main {
                 }
             }
         }
-        return "eta min: " + NodeState.durationString(lowestETA) + ", max: " + NodeState.durationString(highestETA)
-                + "done max: " + highestCompletedCases + " of " + totalCases;
+        return "eta min: " + (lowestETA != Long.MAX_VALUE? NodeState.durationString(lowestETA): "? ")
+                + ", max: " + (highestETA != 0? NodeState.durationString(highestETA): "? ")
+                + " done max: " + highestCompletedCases + " of " + totalCases;
     }
 }

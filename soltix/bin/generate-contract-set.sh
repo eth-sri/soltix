@@ -63,6 +63,9 @@ exit 1
 		# Don't abort for now, we still have evaluation bugs:
 		# exit 1
 	fi
+
+	report-progress.sh progress generating $i $CONTRACT_COUNT $MD5
+
 	i=`expr $i + 1`
 	PRNG_SEED=`expr $PRNG_SEED + 1`
 
@@ -70,7 +73,6 @@ exit 1
 
 	printf "$MD5 - "
 
-	report-progress.sh progress generating $i $CONTRACT_COUNT $MD5
 
 
 	SAVEDIR="$DIRECTORY/$MD5"

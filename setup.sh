@@ -115,7 +115,7 @@ INSTALLED_SOLC=`whereis solc | awk '{print $2}'`
 
 # 1. Select compiler binary - using the current solc static binary as initial suggestion
 # TODO use truffle external compiler function to reference the selected binary as well
-SOLC_VERSION_5="0.5.6"
+SOLC_VERSION_5="0.5.9"
 
 USER_INPUT=""
 
