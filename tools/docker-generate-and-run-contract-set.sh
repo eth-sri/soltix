@@ -157,7 +157,26 @@ follow_coordinator_local() {
 #############
 ######################################################################################
 
-GCLOUD_ZONE=europe-west1-b
+GCLOUD_ZONE="europe-west1-b europe-west2-b europe-west3-b"
+GCLOUD_SELECTED_ZONE=""
+
+# TODO Sanity check on zones - are they up?
+# ... gcloud compute zones list ...
+
+
+# Map node ID to zone (stored in GCLOUD_SELECTED_ZONE) to address 8-nodes-per-zone limitation
+get_gcloud_zone_by_id() {
+	# The default limit is apparently 8 instances per zone
+	# The instance id is 0-based, so 0-7 go to zone 1, 8 to 15 to zone 2, etc.
+	ZONE_INDEX=`expr $1 / 8`
+	ZONE_INDEX=`expr $ZONE_INDEX + 1`
+	ZONE=`echo $GCLOUD_ZONE | awk '{print $'$ZONE_INDEX'}'`
+	if test "$ZONE" = ""; then
+		echo Error: Too many gcloud nodes at $1, invalid zone index $ZONE 
+		# TODO shutdown and exit?
+	fi
+	GCLOUD_SELECTED_ZONE=$ZONE
+}
 
 # default:
 #	n1-standard-1
@@ -177,10 +196,12 @@ do_start_instance_gcloud() {
 	INSTANCE_NUMBER="$1"  # only meaningful for worker nodes
 	INSTANCE_NAME="$2"
 
-	if test "$INSTANCE_NUMBER" != none; then
+	if test "$INSTANCE_NUMBER" != 0; then
+		INSTANCE_ID=$INSTANCE_NUMBER
 		GCLOUD_COORDINATOR_HOST_IP=`gcloud compute instances list | grep soltix-coordinator | awk '{print $4}'`
 		COORDINATOR_COMM_ARGS="--container-env SOLTIX_COORDINATOR_HOST=$GCLOUD_COORDINATOR_HOST_IP --container-env SOLTIX_NODE_ID=$INSTANCE_NUMBER"
 	else
+		INSTANCE_ID=0
 		COORDINATOR_COMM_ARGS=""
 	fi
 
@@ -193,7 +214,11 @@ do_start_instance_gcloud() {
 		shift 1
 	done
 
-	echo        gcloud compute instances create-with-container "$INSTANCE_NAME" --zone=europe-"$GCLOUD_ZONE" --machine-type="$MACHINE_TYPE" --container-image eu.gcr.io/soltix/soltix \
+
+	get_gcloud_zone_by_id $INSTANCE_ID
+	
+
+	echo        gcloud compute instances create-with-container "$INSTANCE_NAME" --zone="$GCLOUD_SELECTED_ZONE" --machine-type="$MACHINE_TYPE" --container-image eu.gcr.io/soltix/soltix \
                 --container-restart-policy never \
                 $SETTINGS_OVERLAY_ARGUMENT \
 		$COORDINATOR_COMM_ARGS \
@@ -203,7 +228,7 @@ do_start_instance_gcloud() {
 	#   - overlay argument may be empty
 	#   - arglist may expand to multiple arguments
 	#   - the docker instance will use the host's network stack, so the coordinator port need not be exported
-	gcloud compute instances create-with-container "$INSTANCE_NAME" --zone="$GCLOUD_ZONE" --machine-type="$MACHINE_TYPE" --container-image eu.gcr.io/soltix/soltix \
+	gcloud compute instances create-with-container "$INSTANCE_NAME" --zone="$GCLOUD_SELECTED_ZONE" --machine-type="$MACHINE_TYPE" --container-image eu.gcr.io/soltix/soltix \
         	--container-restart-policy never \
 		$SETTINGS_OVERLAY_ARGUMENT \
 		$COORDINATOR_COMM_ARGS \
@@ -239,19 +264,22 @@ start_instance_gcloud() {
 }
 
 stop_instance_gcloud() {
-	gcloud compute instances stop --zone "$GCLOUD_ZONE" -q "$1"
-	gcloud compute instances delete --zone "$GCLOUD_ZONE" -q "$1"
+	INSTANCE_ID=$1
+	INSTANCE_NAME=$2
+	get_gcloud_zone_by_id $INSTANCE_ID
+	gcloud compute instances stop --zone "$GCLOUD_SELECTED_ZONE" -q "$INSTANCE_NAME"
+	gcloud compute instances delete --zone "$GCLOUD_SELECTED_ZONE" -q "$INSTANCE_NAME"
 }
 
 start_coordinator_gcloud() {
-	do_start_instance_gcloud none "$COORDINATOR_INSTANCE_NAME" "$COORDINATOR_SCRIPT_PATH" "$DOCKER_COUNT"
+	do_start_instance_gcloud 0 "$COORDINATOR_INSTANCE_NAME" "$COORDINATOR_SCRIPT_PATH" "$DOCKER_COUNT"
 
 	# allow coordinator connection
 	gcloud compute firewall-rules create coordinator-rule --allow tcp:22732
 }
 
 stop_coordinator_gcloud() {
-	stop_instance_gcloud "$COORDINATOR_INSTANCE_NAME"
+	stop_instance_gcloud 0 "$COORDINATOR_INSTANCE_NAME" &   # in background
 }
 
 follow_coordinator_gcloud() {
@@ -296,17 +324,20 @@ start_instance() {
 }
 
 stop_instance() {
-	if test "$#" != 1; then
-		echo Bug: stop_instance requires instance name argument
+	if test "$#" != 2; then
+		echo Bug: stop_instance requires instance id and instance name argument
 		exit 1
 	fi
-	echo ===== Stopping instance $1 ...
+
+	INSTANCE_ID=$1
+	INSTANCE_NAME=$2
+	echo ===== Stopping instance $INSTANCE_NAME ...
 	if test "$MODE" = local; then
-		stop_instance_local $1
+		stop_instance_local $INSTANCE_NAME
 	else
-		stop_instance_gcloud $1
+		stop_instance_gcloud $INSTANCE_ID $INSTANCE_NAME &    # in background
 	fi
-	echo ===== Done stopping instance $1 ...
+	echo ===== Done stopping instance $INSTANCE_NAME ...
 }
 
 start_coordinator() {
@@ -341,15 +372,16 @@ follow_coordinator() {
 
 
 
+INSTANCE_ID=0
 start_coordinator
 sleep 10 
 
 i=0
 while test "$i" -lt "$DOCKER_COUNT"; do
-	INSTANCE=`expr $i + 1`
-	INSTANCE_NAME=soltix$INSTANCE
+	INSTANCE_ID=`expr $i + 1` # id starts at 1 (coordinator is at 0)
+	INSTANCE_NAME=soltix$INSTANCE_ID
 
-	start_instance $INSTANCE $INSTANCE_NAME
+	start_instance $INSTANCE_ID $INSTANCE_NAME
 
 	SEED=`expr $SEED + $CONTRACT_COUNT`
 	i=`expr $i + 1`
@@ -364,10 +396,10 @@ follow_coordinator
 i=0
 # TODO instance id generation redundant to loop above
 while test "$i" -lt "$DOCKER_COUNT"; do
-	INSTANCE=`expr $i + 1`
+	INSTANCE_ID=`expr $i + 1`
 	INSTANCE_NAME=soltix$INSTANCE
 
-	stop_instance $INSTANCE_NAME
+	stop_instance $INSTANCE_ID $INSTANCE_NAME
 
 	i=`expr $i + 1`
 done
