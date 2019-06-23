@@ -106,26 +106,27 @@ LOCAL_CONTRACT_DIR_CONTAINER="/VOL"
 LOCAL_COORDINATOR_HOST_IP=`ip -4 addr show docker0 | grep inet | awk -F/ '{print $1}' | awk '{print $2}'`
 
 start_instance_local() {
-	INSTANCE_NAME=$1
+	INSTANCE_ID=$1
+	INSTANCE_NAME=$2
 	ALL_INSTANCE_NAMES="$ALL_INSTANCE_NAMES $INSTANCE_NAME"
-	REDIR_FILE="$CONTRACT_DIR_HOST/$INSTANCE".txt
+	REDIR_FILE="$CONTRACT_DIR_HOST/$INSTANCE_ID".txt
 
 	docker rm -f $INSTANCE_NAME  >/dev/null 2>&1
 
 
-	echo docker run --name soltix$INSTANCE --mount type=bind,source="`realpath $CONTRACT_DIR_HOST`",target=/VOL \
-		-e SOLTIX_COORDINATOR_HOST=$LOCAL_COORDINATOR_HOST_IP -e SOLTIX_NODE_ID=$INSTANCE $SETTINGS_OVERLAY_ARGUMENT \
+	echo docker run --name soltix$INSTANCE_ID --mount type=bind,source="`realpath $CONTRACT_DIR_HOST`",target=/VOL \
+		-e SOLTIX_COORDINATOR_HOST=$LOCAL_COORDINATOR_HOST_IP -e SOLTIX_NODE_ID=$INSTANCE_ID $SETTINGS_OVERLAY_ARGUMENT \
 		soltix \
 		"$EXECUTOR_SCRIPT_PATH" \
-		$CONTRACT_COUNT $SEED $FUNCTION_COUNT $STMT_LOWER_BOUND $STMT_UPPER_BOUND $VARIABLE_COUNT $LOCAL_CONTRACT_DIR_CONTAINER/$INSTANCE $CONTRACT_TYPE $RUN_MODE
+		$CONTRACT_COUNT $SEED $FUNCTION_COUNT $STMT_LOWER_BOUND $STMT_UPPER_BOUND $VARIABLE_COUNT $LOCAL_CONTRACT_DIR_CONTAINER/$INSTANCE_ID $CONTRACT_TYPE $RUN_MODE
 
 
 
-	(sleep 10 ; docker run --name soltix$INSTANCE --mount type=bind,source="`realpath $CONTRACT_DIR_HOST`",target=/VOL \
-		-e SOLTIX_COORDINATOR_HOST=$LOCAL_COORDINATOR_HOST_IP -e SOLTIX_NODE_ID=$INSTANCE $SETTINGS_OVERLAY_ARGUMENT \
+	(sleep 10 ; docker run --name soltix$INSTANCE_ID --mount type=bind,source="`realpath $CONTRACT_DIR_HOST`",target=/VOL \
+		-e SOLTIX_COORDINATOR_HOST=$LOCAL_COORDINATOR_HOST_IP -e SOLTIX_NODE_ID=$INSTANCE_ID $SETTINGS_OVERLAY_ARGUMENT \
 		soltix \
 		"$EXECUTOR_SCRIPT_PATH" \
-		$CONTRACT_COUNT $SEED $FUNCTION_COUNT $STMT_LOWER_BOUND $STMT_UPPER_BOUND $VARIABLE_COUNT $LOCAL_CONTRACT_DIR_CONTAINER/$INSTANCE $CONTRACT_TYPE $RUN_MODE \
+		$CONTRACT_COUNT $SEED $FUNCTION_COUNT $STMT_LOWER_BOUND $STMT_UPPER_BOUND $VARIABLE_COUNT $LOCAL_CONTRACT_DIR_CONTAINER/$INSTANCE_ID $CONTRACT_TYPE $RUN_MODE \
 		) >"$REDIR_FILE"   2>&1   &
 	# TODO schedule container shutdown? or don't care locally?
 }
@@ -192,6 +193,12 @@ get_gcloud_zone_by_id() {
 #    n1-highmem-2:  avg ca. 30s/case
 MACHINE_TYPE=n1-standard-1
 
+IMAGE_ADDRESS=eu.gcr.io/soltix/soltix
+if test "$IMAGE_ADDRESS" = ""; then
+	echo Error: IMAGE_ADDRESS not set - should hold soltix docker image address
+	exit 1
+fi
+
 do_start_instance_gcloud() {
 	INSTANCE_NUMBER="$1"  # only meaningful for worker nodes
 	INSTANCE_NAME="$2"
@@ -218,7 +225,7 @@ do_start_instance_gcloud() {
 	get_gcloud_zone_by_id $INSTANCE_ID
 	
 
-	echo        gcloud compute instances create-with-container "$INSTANCE_NAME" --zone="$GCLOUD_SELECTED_ZONE" --machine-type="$MACHINE_TYPE" --container-image eu.gcr.io/soltix/soltix \
+	echo        gcloud compute instances create-with-container "$INSTANCE_NAME" --zone="$GCLOUD_SELECTED_ZONE" --machine-type="$MACHINE_TYPE" --container-image "$IMAGE_ADDRESS" \
                 --container-restart-policy never \
                 $SETTINGS_OVERLAY_ARGUMENT \
 		$COORDINATOR_COMM_ARGS \
@@ -228,7 +235,7 @@ do_start_instance_gcloud() {
 	#   - overlay argument may be empty
 	#   - arglist may expand to multiple arguments
 	#   - the docker instance will use the host's network stack, so the coordinator port need not be exported
-	gcloud compute instances create-with-container "$INSTANCE_NAME" --zone="$GCLOUD_SELECTED_ZONE" --machine-type="$MACHINE_TYPE" --container-image eu.gcr.io/soltix/soltix \
+	gcloud compute instances create-with-container "$INSTANCE_NAME" --zone="$GCLOUD_SELECTED_ZONE" --machine-type="$MACHINE_TYPE" --container-image "$IMAGE_ADDRESS" \
         	--container-restart-policy never \
 		$SETTINGS_OVERLAY_ARGUMENT \
 		$COORDINATOR_COMM_ARGS \
