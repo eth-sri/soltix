@@ -60,6 +60,10 @@ if test "$RC" != 0 && test "$CALLED_BY_RUN_ALL_TESTS" != yes; then
 	cat current-contract-out.log current-contract-err.log
 fi
 
+
+PROGRESS_SUMMARY=other-error
+
+
 # Check for some errors that may have occurred even if run-one-test.sh indicated success
 if grep 'Error: redPow(normalNum)' "$BLOCKCHAIN_LOG_FILE" >/dev/null;  then
 	printf "GANACHE-CLI ERROR redPow()"
@@ -77,10 +81,12 @@ elif ! test -f "$PATH_PROFILING_EVENTS_LOG"; then
 elif grep EXPR_ERROR "$PATH_PROFILING_EVENTS_LOG" >/dev/null; then
 	# Evaluation vs. executon mismatch
 	printf "POSSIBLE BUG: EXPR_ERROR"
+	PROGRESS_SUMMARY=bug-candidate-expr
 
 # Success:
 elif test "$RC" = 0; then
 	printf OK
+	PROGRESS_SUMMARY=ok
 
 	# Include info on whether an exception (assert/require/revert) was encountered but ignored
 	if grep EXCEPTION_REQUIRE_FAILURE "$PATH_PROFILING_EVENTS_LOG" >/dev/null; then
@@ -138,10 +144,13 @@ elif grep 'please check your gas limit' current-contract-out.log >/dev/null; the
 	printf "GETH DEPLOYMENT GAS ERROR #2"
 elif grep 'ERROR: Memory state difference between original and instrumented' current-contract-out.log >/dev/null; then
 	printf "POSSIBLE BUG: INSTRUMENTATION STORAGE ERROR" 
+	PROGRESS_SUMMARY=bug-candidate-event
 elif grep 'ERROR: Memory state difference between original and mutated' current-contract-out.log >/dev/null; then
 	printf "POSSIBLE BUG: MUTATION STORAGE ERROR"
+	PROGRESS_SUMMARY=bug-candidate-event
 elif grep 'ERROR: Event log difference between' current-contract-out.log >/dev/null; then
 	printf "POSSIBLE BUG: EVENT LOG ERROR"
+	PROGRESS_SUMMARY=bug-candidate-event
 elif grep 'Mutator failed for live EMI application' current-contract-out.log >/dev/null; then
 	printf "MUTATION GENERATION ERROR"
 elif grep 'JavaScript heap out of memory'  "$PATH_TRUFFLE_LOG_FILE" >/dev/null; then
@@ -170,5 +179,7 @@ else
 #exit 1
 fi
 echo
+
+echo "$PROGRESS_SUMMARY" >progress-summary.log
 
 exit "$RC"

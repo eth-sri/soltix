@@ -23,6 +23,9 @@ fi
 
 DIR="$7"
 LOG="_generate-contract.log"
+
+report-progress.sh status on
+
 if generate-contract-set.sh $1 $2 $3 $4 $5 $6 $7 $8; then
 	run-all-tests.sh "$DIR" $9
 	STATUS=$?
@@ -31,4 +34,9 @@ else
 	grep Error "$LOG"
 	echo See "$LOG" for detailed log output
 fi
+
+report-progress.sh status off
+
+
+
 exit $STATUS

@@ -4,7 +4,7 @@
 # SOLTIX: Scalable automated framework for testing Solidity compilers.
 
 SOLTIX is a framework for automated testing of Solidity compilers supported by the [Ethereum Foundation](https://www.ethereum.org/) and the [ICE Center](http://www.ice.ethz.ch/blockchain), [ETH Zurich](https://www.ethz.ch/en.html). 
-The research and development of SOLTIX started at the ICE center, as the MSc thesis project of [Nils Weller](mailto:nweller@student.ethz.ch) under the supervision of [Dr. Petar Tsankov](https://twitter.com/ptsankov) and [Prof. Martin Vechev](martin.vechev@inf.ethz.ch).
+The research and development of SOLTIX started at the ICE center, as the MSc thesis project of [Nils Weller](mailto:nils.weller@alumni.ethz.ch) under the supervision of [Dr. Petar Tsankov](https://twitter.com/ptsankov) and [Prof. Martin Vechev](martin.vechev@inf.ethz.ch).
 
 The project now is an open platform welcoming contributors from the Ethereum community. To learn more about the framework, build on top of it or extend it to other virtual machines, please get in touch with the core team and contributors at our [Discord group](https://discord.gg/XKSVavS).
 
@@ -89,11 +89,26 @@ The framework can be used in Docker or natively on Linux systems.
 
 ## Docker installation
 
-To build a Docker image containing the ready-to-use framework, run:
+To build a Docker image containing the ready-to-use framework in the local directory,
+you can just run:
 
 	docker build . -t soltix
 
-The [Docker-specifics](#docker-specifics) section describes how to use it.
+The [Docker-specifics](#docker-specifics) and [combined generation and execution](#with-docker)
+sections describe how to use it. The latter introduces settings.cfg.sh overlay files to
+configure the container instance for each execution. This currently only allows switching
+between multiple solcjs versions - if the binary solc compiler is to be tested, only a single
+default solc binary is available. To select a solc binary which isn't the default, the image
+must be built to contain that binary by placing it in the directory "builddeps" prior to
+running the docker build:
+
+	./builddeps/solc
+
+Instead of running "docker build", an additional convenience script taking a git
+repository (local directory or remote URL), a temporary directory name, and the
+branch to build can be used as well, e.g.:
+
+	./tools/build-docker-image.sh . _TMP master
 
 
 ## Native installation
@@ -163,6 +178,15 @@ optimization settings. Note that ganache-cli and restricted code generation
 options are used by default - switching to geth and enabling more advanced
 features is desirable for many purposes.
 
+Instead of downloading the solc compiler binary, the go-ethereum blockchain
+client and the the go compiler used to build go-ethereum, these components
+can be supplied in the "builddeps" directory prior to running setup.sh using
+the following naming conventions:
+
+        ./builddeps/go.tgz       - go installation package
+        ./builddeps/go-ethereum  - cloned geth repository
+        ./builddeps/solc         - solc binary
+
 ## Use
 
 A basic introduction to the most important framework commands is given below.
@@ -225,7 +249,8 @@ the behavior of the same contract executed at varying optimization levels.
 
 The [generation scripts](#generation) are described below, followed by the [execution scripts](#execution),
 and finally a section on [convenience scripts](#combined-generation-and-execution) that
-combine generation and execution and also enable parallelization with docker.
+combine generation and execution, and also enable parallelization and cloud processing
+with docker.
 
 
 
@@ -460,20 +485,48 @@ and run-all-tests.sh scripts described above, e.g. to generate and execute 5 con
 
 	./tools/generate-and-run-contract-set.sh 5 0 10 1 2 20 X --assignmentSequence 0
 
+#### With docker
+
 For contract sets, an additional script can split the work and distribute it to
 multiple docker instances for parallelization:
 
-        ./tools/docker-generate-and-run-contract-set.sh 2 6 1 1 1 1 1 DIR --complete 0
+	./tools/docker-generate-and-run-contract-set.sh
 
-... with the same arguments as generate-and-run-contract-set.sh, but with an additional
-count of docker instances to use passed as first argument. In the example, 6 contracts
-are generated and executed starting from seed 6, and will be executed by two docker
-instances: instance 1 doing contract seed 1 to 3 and instance 2 doing contract seed
-4 to 6. Results are stored in DIR, with sub directories for the instances.
+This enables experimental Google cloud compute processing facilities, but the feature
+can also be used locally to improve multi-core utilization.
 
-Simple bechmarks on multiple docker instances can be taken by using the script:
+The script takes the arguments of generate-and-run-contract-set.sh described above,
+preceded by the following additional arguments (run the script without arguments to
+get a list of all options):
 
-        ./tools/docker-benchmark.sh
+1. "local"/"gcloud" execution selection. gcloud is an *experimental* cloud processing mode - use at your own risk, and supervise actively to detect runaway instances eating up proecssing time or connection errors
+2. maximum duration in seconds (cap cloud processing costs in advance in case things go wrong - this does not work properly yet)
+3. docker instance count (starting one compute node per instance in gcloud mode)
+4. settings.cfg.sh overlay file path (defining environment variables (format: NAME=value) that will override settings.cfg.sh variables in the container)
+
+The test process requires:
+
+1. Building a docker image "soltix" - see the [Docker installation](#docker-installation)
+section for instructions
+2. Optional steps required only to run on Google cloud:
+	- Set up a gcloud account and project, e.g. called "soltix"
+	- Install gcloud SDK
+	- Push the image to the project's docker registry using the ./tools/gcloud-push-image.sh script
+3. Execute the desired commands using the docker script, e.g.: 
+	./tools/docker-generate-and-run-contract-set.sh local 100 1 ./settings-overlay.cfg.sh 1 1 10 1 10 30 X --assignmentSequence 0
+4. Especially in gcloud mode, it is highly advisable to supervise execution to detect indefinite hang-ups preventing proper shutdown of instances
+5. In gcloud mode, termination of all nodes should be checked with
+        gcloud compute instances list
+   and remaining nodes can be shut down by running
+        ./tools/gcloud-sweep.sh
+
+Contract generation and execution results currently aren't stored anywhere - after
+encountering bugs, use the parameters for the affected test case to rerun and debug it
+locally.
+
+####
+
+
 
 ### Test process
 
@@ -523,13 +576,8 @@ All components - SOLTIX, solc and truffle - exhibit performance issues for contr
 exceeding a few 100 or 1000 lines, and may fail completely. Experimentation is
 needed to find sensible upper limits on a given system.
 
-It is currently only possible to use truffle/ganache-cli as execution platform,
-which poses two problems:
-
-1. ganache-cli crashes on various exponentiation and shift operations, which
-motivates the settings.cfg.sh options to disable their use completely by default
-2. Other execution platforms, e.g. based on aleth, do not benefit from the test
-process
+It is currently only possible to use truffle or geth as blockchain execution
+platform - leaving other platforms such as aleth unsupported.
 
 
 # Technical details

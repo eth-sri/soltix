@@ -87,6 +87,16 @@ for c in $CONTRACT_SET; do
 	else
         	SUBPROJNAME=`echo $c | awk -F'/' '{ print $(NF-1) }'`
         	printf "$i of $total: $SUBPROJNAME "
+
+		if test -d "$c"; then
+			# Generated contract dir
+			MD5=`cat $c/md5`
+		else
+			MD5=00000000000000000000000000000000
+		fi
+		report-progress.sh progress running $i $total $MD5
+
+
 		start_timestamp=`date '+%s'`
 
 		CALLED_BY_RUN_ALL_TESTS=yes run-one-test.sh "$c" $MUTATIONS_COUNT $IS_GENERATED_SET >summary.log
@@ -106,6 +116,7 @@ for c in $CONTRACT_SET; do
 
 		printf "`cat summary.log`"
 
+		report-progress.sh progress "done" $i $total $MD5 "`cat progress-summary.log`"
 
 
 		rm -f "${DIR}/${SUBPROJNAME}"/TruffleTest.log
