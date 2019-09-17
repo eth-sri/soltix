@@ -30,8 +30,8 @@ fi
 
 
 if test "$#" != 2; then
-        echo Invalid argument count "$#"
-        usage
+        echo Invalid argument count "$#" - expected 2 arguments
+	exit 1
 fi
 
 c="$1"

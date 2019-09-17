@@ -42,12 +42,12 @@ if ! test -f "$INPUT_TX_JSON_PATH"; then
 fi
 
 
-. ../settings.cfg.sh
-if ! test "$?" = 0; then
-        echo Error: Cannot load ../settings.cfg.sh
-        exit 1
+SETTINGS=`dirname $0`/../../settings.cfg.sh
+if ! . "$SETTINGS"; then
+	echo Error: Cannot load settings file $SETTINGS - please run setup.sh
+	exit 1
 fi
 
- ./run-soltix.sh "$INPUT_SOL_FILE_PATH" --solidityOutput="$OUTPUT_SOL_FILE_PATH" --interpret="$INPUT_TX_JSON_PATH"="$OUTPUT_EVENT_FILE_NAME"
+run-soltix.sh "$INPUT_SOL_FILE_PATH" --solidityOutput="$OUTPUT_SOL_FILE_PATH" --interpret="$INPUT_TX_JSON_PATH"="$OUTPUT_EVENT_FILE_NAME"
 
 
