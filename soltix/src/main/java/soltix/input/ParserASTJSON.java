@@ -26,6 +26,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import soltix.Configuration;
 import org.json.simple.JSONArray;
@@ -37,6 +38,9 @@ import soltix.ast.*;
  * Parser of Solidity code supplied in "--ast-json" solc JSON output format
  */
 public class ParserASTJSON extends Parser {
+    private HashMap<Integer, Integer> sourceLineMap = null;
+    private int sourceLineCount = 0;
+
     protected void debugPrint(int depth, String s) {
         if (!Configuration.debugASTOutput) return;
 
@@ -55,11 +59,17 @@ public class ParserASTJSON extends Parser {
             throw new Exception("Unexpected SourceUnit item");
         }
         String codeFile = (String)attributes.get("absolutePath");
-        if (Configuration.debugASTOutput && codeFile != null) {
-            if (Configuration.debugASTOutput) {
-                // Read source file into byte array to extract code referenced by JSON nodes
-                Path path = Paths.get(codeFile);
-                codeArray = Files.readAllBytes(path);
+        if (Configuration.collectInputTokenPositions && codeFile != null) {
+            // Read source file into byte array to extract code referenced by JSON nodes
+            Path path = Paths.get(codeFile);
+            codeArray = Files.readAllBytes(path);
+            // Create newline index -> line number map
+            sourceLineMap = new HashMap<Integer, Integer>();
+            sourceLineCount = 1;
+            for (int i = 0; i < codeArray.length; ++i) {
+                if (codeArray[i] == '\n') {
+                    sourceLineMap.put(i, sourceLineCount++);
+                }
             }
         }
         ast.addInnerNode(new ASTSourceUnit(id));
@@ -553,6 +563,7 @@ public class ParserASTJSON extends Parser {
         String itemName = null;
         String attrName = null;
         int codeStart = 0;
+        int codeLineNumber = 0;
         long id;
         String code = null;
 
@@ -561,13 +572,21 @@ public class ParserASTJSON extends Parser {
         if (attributes != null) {
             attrName = (String)attributes.get("name");
             // Extract corresponding source code for debugging
-            if (Configuration.debugASTOutput) {
+            if (Configuration.collectInputTokenPositions) {
                 String src = (String)jsonObject.get("src");
                 if (codeArray != null && src != null) {
                     String[] parts = src.split(":");
                     codeStart = Integer.parseInt(parts[0]);
                     int codeLength = Integer.parseInt(parts[1]);
                     code = new String(codeArray, codeStart, codeLength, "UTF-8").replaceAll("\n", "\\\\n");
+                    // Map token to its line number
+                    codeLineNumber = this.sourceLineCount; // Holds if we're on the last line and there's no final '\n'
+                    for (int i = codeStart; i < codeArray.length; ++i) {
+                        if (codeArray[i] == '\n') {
+                            codeLineNumber = sourceLineMap.get(i);
+                            break;
+                        }
+                    }
                 }
             }
         }
@@ -674,6 +693,8 @@ public class ParserASTJSON extends Parser {
         } else {
             throw new Exception("Unknown JSON object: " + (itemName == null? "no name": itemName));
         }
+
+        ast.getCurrentNode().setInputCodeLineNumber(codeLineNumber);
     }
 
     protected void JSONObjectToAST(AST ast, JSONObject jsonObject, int depth) throws Exception {

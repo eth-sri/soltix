@@ -37,23 +37,22 @@ import java.util.ArrayList;
 public class Transaction {
     private ASTContractDefinition contract;
     private ASTFunctionDefinition function;
-    private ArrayList<Value> arguments;
+    private ArrayList<Value> arguments = new ArrayList<Value>();
+
 
     // Constructor to build - and later write as JSON - a transaction
     public Transaction(ASTContractDefinition contract, ASTFunctionDefinition function) {
         this.contract = contract;
         this.function = function;
-        arguments = new ArrayList<Value>();
+    }
+    // Constructor to load a transaction from a JSON object
+    public Transaction(AST ast, JSONObject jsonObject) throws Exception {
+        fromJSONObject(ast, jsonObject);
     }
 
     public ASTContractDefinition getContract() { return contract; }
     public ASTFunctionDefinition getFunction() { return function; }
     public ArrayList<Value> getArguments() { return arguments; }
-
-    // Constructor to load a transaction from a JSON object
-    public Transaction(AST ast, JSONObject jsonObject) throws Exception {
-        fromJSONObject(ast, jsonObject);
-    }
 
     public void addArgumentValue(Value value) {
         arguments.add(value);
@@ -67,7 +66,7 @@ public class Transaction {
 
         JSONArray jsonArgumentArray = new JSONArray();
         for (Value argumentValue : arguments) {
-            jsonArgumentArray.add(JSONValueConverter.objsoltixromValue(argumentValue));
+            jsonArgumentArray.add(JSONValueConverter.objectFromValue(argumentValue));
         }
         result.put("args", jsonArgumentArray);
         return result;
@@ -87,7 +86,9 @@ public class Transaction {
         ArrayList<ASTVariableDeclaration> declaredParameters = function.getParameterList().toArrayList();
         for (int i = 0; i < jsonArgumentArray.size(); ++i) {
             Object item = (Object)jsonArgumentArray.get(i);
-            Value value = JSONValueConverter.valueFromObject(declaredParameters.get(i), item);
+            ASTVariableDeclaration parameterDeclaration = (ASTVariableDeclaration)declaredParameters.get(i);
+            Value value = JSONValueConverter.valueFromObject(parameterDeclaration.getTypeName(), item);
+
             arguments.add(value);
         }
     }

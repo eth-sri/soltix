@@ -96,7 +96,15 @@ public class VariableEnvironment {
         }
     }
 
-    public Variable getVariable(String name) {
+    public Variable getVariable(String name) throws Exception {
+        if (variables == null) {
+            throw new Exception("VariableEnvironment.getVariable called on nonexistent variables map");
+        }
+
+        if (!variables.containsKey(name)) {
+            return null;
+        }
+
         return variables.get(name).getVariable();
     }
 
@@ -129,7 +137,11 @@ public class VariableEnvironment {
         // Check type consistency of one representative value (if available) with variable type
         if (var.getType() == null) throw new Exception("Variable type is null for " + var.getName());
 
-        if (values.getValueCount() > 0 && values.getValue(0).getType() == null) throw new Exception("Value type for variable " + var.getName() + " is null");
+        if (values.getValueCount() > 0
+                && values.getValue(0).getType() == null) {
+            throw new Exception("Value type for variable " + var.getName() + " is null");
+        }
+
         if (values.getValueCount() > 0
             && !Type.isSameType(ast, var.getType(), values.getValue(0).getType())) {
             throw new Exception("VariableEnvironment.addVariableValues: Added value with type "

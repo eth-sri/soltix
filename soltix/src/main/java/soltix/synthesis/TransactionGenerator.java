@@ -158,7 +158,7 @@ public class TransactionGenerator {
                 resultArgumentListString += ", ";
             }
             resultArgumentListString += value.toASTNode(true).toSolidityCode();
-            //jsonArgumentArray.add(JSONValueConverter.objsoltixromValue(value));
+            //jsonArgumentArray.add(JSONValueConverter.objectFromValue(value));
             transaction.addArgumentValue(value);
         }
         //transactionJSONObject.put("args", jsonArgumentArray);

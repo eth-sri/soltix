@@ -49,6 +49,7 @@ public class Main {
         for (int i = 0; i < args.length; ++i) {
             if (args[i].equals("--debugASTOutput")) {
                 Configuration.debugASTOutput = true;
+                Configuration.collectInputTokenPositions = true;
             } else if (args[i].equals("--skipASTProcessing")) {
                 Configuration.skipASTProcessing = true;
             } else if (args[i].startsWith("--debugGraphPlot=")) {
@@ -168,6 +169,8 @@ public class Main {
                 }
                 Configuration.interpretationTransactionsFile = s[1];
                 Configuration.interpretationOutputLogFile = s[2];
+
+                Configuration.collectInputTokenPositions = true; // For line numbers in error/warning messages
             } else if (args[i].equals("--inject-loop-limits")) {
                 Configuration.injectLoopLimits = true;
             } else if (args[i].equals("--guaranteeSafeExecution")) {

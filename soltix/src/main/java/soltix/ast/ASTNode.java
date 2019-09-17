@@ -50,13 +50,18 @@ abstract public class ASTNode {
     private int outputCodeLineNumber = 0;
     private int outputCodeLinePosition = 0;
     private int outputCodeLength = 0;
+    // Solidity input file line number for error messages (used by interpretation)
+    private int inputCodeLineNumber;
 
     public void setOutputCodeLineNumber(int lineNumber) { outputCodeLineNumber = lineNumber; }
     public void setOutputCodeLinePosition(int positionInLine) { outputCodeLinePosition = positionInLine; }
     public void setOutputCodeLength(int outputLength) { outputCodeLength = outputLength; }
+    public void setInputCodeLineNumber(int lineNumber) { inputCodeLineNumber = lineNumber; }
     public int getOutputCodeLineNumber() { return outputCodeLineNumber; }
     public int getOutputCodeLinePosition() { return outputCodeLinePosition; }
     public int getOutputCodeLength() { return outputCodeLength; }
+    public int getInputCodeLineNumber() { return inputCodeLineNumber; }
+
 
     public long getReferencedDeclarationId() { return referencedDeclarationId; }
 

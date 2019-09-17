@@ -34,6 +34,7 @@ import soltix.util.JSONValueConverter;
 import soltix.util.RandomNumbers;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import soltix.util.Util;
 
 import java.io.FileWriter;
 import java.util.ArrayList;
@@ -138,7 +139,13 @@ public class FullInterpreter implements IInterpreterCallback {
             VariableValues variableValues = new VariableValues(variable, 0);
 
             // Start out with initializer value
-            variableValues.addValue(variableDeclaration.getInitializerValue());
+            Value initializerValue = variableDeclaration.getInitializerValue();
+            if (initializerValue == null) {
+                // TODO no initializer given - construct default (null) value for this item
+                // initializerValue = ValueContainer....
+                Util.unimpl();
+            }
+            variableValues.addValue(initializerValue);
             globalEnvironment.addVariableValues(variable, variableValues);
         }
     }
@@ -204,13 +211,13 @@ public class FullInterpreter implements IInterpreterCallback {
 
         // Evaluate arguments
         ASTFunctionCall functionCall = emitStatement.getFunctionCall();
-        ArrayList<Expression> arguments = functionCall.getExpressionArguments(null/*TODO*/);
+        ArrayList<Expression> arguments = functionCall.getExpressionArguments(globalEnvironment);
         for (int i = 0 ; i < arguments.size(); ++i) {
             System.out.println("  arg " + i + " " + arguments.get(i).toASTNode().toSolidityCode());
 
             Value result = expressionEvaluator.evaluateForAll(globalEnvironment, arguments.get(i)).values.get(0);
             // TODO Event argument name
-            argsObject.put("a", JSONValueConverter.objsoltixromValue(result));
+            argsObject.put("a", JSONValueConverter.objectFromValue(result));
         }
 
         eventObject.put("args", argsObject);

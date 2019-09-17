@@ -685,6 +685,7 @@ public class Driver {
             }
         } catch (Exception e) {
             logger.error("Driver.interpretProgram: Exception while parsing tx-json file " + transactionsJSONFile + ": " + e.toString());
+            e.printStackTrace();
             return false;
         }
 

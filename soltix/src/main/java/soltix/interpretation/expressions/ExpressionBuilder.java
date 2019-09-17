@@ -24,6 +24,7 @@ import soltix.ast.*;
 import soltix.interpretation.values.Value;
 import soltix.interpretation.variables.Variable;
 import soltix.interpretation.variables.VariableEnvironment;
+import soltix.output.Console;
 
 import java.util.ArrayList;
 
@@ -42,6 +43,11 @@ public class ExpressionBuilder {
         } else if (astNode instanceof ASTIdentifier) {
             ASTIdentifier identifier = (ASTIdentifier) astNode;
             Variable variable = environment.getVariable(identifier.getName());
+
+            if (variable == null) {
+                Console.error(astNode, "Reference to unknown variable '" + identifier.getName() + "'");
+                throw new Exception("fromASTNode failed"); // TODO proper console errors vs. exceptions
+            }
             result = new Expression(variable);
         } else if (astNode instanceof ASTFunctionCall) {
             ASTFunctionCall functionCall = (ASTFunctionCall)astNode;

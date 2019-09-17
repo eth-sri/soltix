@@ -39,7 +39,6 @@ public class JSONValueConverter {
         //
         // TODO Actually do this - only store strings and integers for now.
         //     ASTNode variableType = variable.getType();
-
         if (Type.isIntegerType(variableType)) {
             // TODO: Use ValueContainer, decision of Big/Small dichotomy unclear here. Maybe we should be using BigInteger
             // for everything but that will hurt performance
@@ -85,7 +84,7 @@ public class JSONValueConverter {
         }
     }
 
-    static public Object objsoltixromValue(Value value) throws Exception {
+    static public Object objectFromValue(Value value) throws Exception {
         return value.toJSONRepresentation();
     }
 
