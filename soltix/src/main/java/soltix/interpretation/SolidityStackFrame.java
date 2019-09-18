@@ -28,6 +28,7 @@ import soltix.interpretation.variables.VariableEnvironment;
 import java.util.ArrayList;
 
 public class SolidityStackFrame {
+    private ASTContractDefinition contract;
     private ASTFunctionDefinition function;
     private ArrayList<Value> arguments;
     private Scope scope;
@@ -37,12 +38,14 @@ public class SolidityStackFrame {
                               ASTFunctionDefinition function,
                               ArrayList<Value> arguments,
                               VariableEnvironment localVariableEnvironment) throws Exception {
-
+        this.contract = contract;
         this.function = function;
         this.arguments = arguments;
         scope = new Scope(contract);
         scope.setVariableEnvironment(localVariableEnvironment);
     }
+
+    public ASTContractDefinition getContract() { return contract; }
 
     public Scope getScope() { return scope; }
 

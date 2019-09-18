@@ -115,7 +115,7 @@ public class Main {
                 String[] s = args[i].split("=");
                 // Only compare two event logs and return 0 if equal, 1 if not equal or an error occurred
                 try {
-                    System.exit(EventLogComparator.equal(s[1], s[2], true /*TODO - pass this*/) ? 0 : 1);
+                    System.exit(EventLogComparator.equal(s[1], s[2], true /*TODO - pass this*/, true /* TODO */) ? 0 : 1);
                 } catch (Exception e) {
                     logger.error("Exception while trying to compare logs " + s[1] + " and " + s[2] + ": " + e.toString());
                     e.printStackTrace();

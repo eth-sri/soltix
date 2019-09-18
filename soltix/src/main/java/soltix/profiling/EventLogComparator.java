@@ -26,6 +26,7 @@ import org.json.simple.parser.JSONParser;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.util.ArrayList;
+import java.util.Map;
 
 /**
  * Comparison of two event logs from the execution of two contracts that are expected to be semantically equivalent
@@ -36,7 +37,28 @@ import java.util.ArrayList;
 public class EventLogComparator {
     final static Logger logger = Logger.getLogger(EventLogComparator.class);
 
-    static public boolean equal(String firstLogPath, String secondLogPath, boolean ignoreProfilingEvents) throws Exception {
+    static private void removeDebugOutputArguments(JSONObject object) {
+        // Ignore truffle (?) debug output which currently turns an
+        //    event E(int x);
+        //    emit E(123)
+        // into an event output argument list of
+        //    E( "0": 123, "__length__": ..., "x": 123)
+        // We exclude numeric as well as "__line__"-named arguments
+        ArrayList<String> toRemove = new ArrayList<String>();
+        for (Object argument : object.entrySet()) {
+            Map.Entry<String, Object> entry = (Map.Entry<String, Object>)argument;
+            if (entry.getKey().equals("__length__") || Character.isDigit(entry.getKey().charAt(0))) {
+                toRemove.add(entry.getKey());
+            }
+        }
+        for (String key : toRemove) {
+            object.remove(key);
+        }
+    }
+
+    static public boolean equal(String firstLogPath, String secondLogPath,
+                                boolean ignoreProfilingEvents,
+                                boolean ignoreDebugOutput) throws Exception {
         // Perform a light-weight line-by-line event comparison. No AST or type info is needed, only event
         // names and argument names/values
         BufferedReader firstLogReader = new BufferedReader(new FileReader(firstLogPath));
@@ -50,6 +72,8 @@ public class EventLogComparator {
         for (;;) {
             String firstEventName = null, secondEventName = null;
             String firstEventArguments = null, secondEventArguments = null;
+            JSONObject firstEventArgumentsObject = null, secondEventArgumentsObject = null;
+
             while (firstLogReader != null) {
                 firstLine = firstLogReader.readLine();
                 if (firstLine == null) {
@@ -65,7 +89,11 @@ public class EventLogComparator {
                         //      {"logIndex":0,"transactionIndex":0,"transactionHash":"0x99f8cae7fd148ac7b8ef615113c89d1065a098eabe9ad25f0ee17b23a5043b8d","blockHash":"0x9a1b8f13df9f406267b8f30a9650405d8d377b6e7b01611645ada6cda1d2553    a","blockNumber":5,"address":"0x802042f99aed5e1d327ddb2aaf82790d89c154bd","data":"0x0","topics":["0x0cb5c216387887a30c1b56bfd6d4562eaf53b432f9a7d3a8bde0298f3f130fa3"],"type":"mined"}
                         continue;
                     }
-                    firstEventArguments = ((JSONObject) firstLineJSON.get("args")).toJSONString();
+                    firstEventArgumentsObject = (JSONObject) firstLineJSON.get("args");
+                    if (ignoreDebugOutput) {
+                        removeDebugOutputArguments(firstEventArgumentsObject);
+                    }
+                    firstEventArguments = firstEventArgumentsObject.toJSONString();
                     if (ignoreProfilingEvents && firstEventName.startsWith(ProfilingEvent.profilingEventPrefix)) {
                         // Skip profiling events
                         firstEventName = null;
@@ -87,7 +115,11 @@ public class EventLogComparator {
                     if (secondEventName == null) {
                         continue;
                     }
-                    secondEventArguments = ((JSONObject) secondLineJSON.get("args")).toJSONString();
+                    secondEventArgumentsObject = (JSONObject) secondLineJSON.get("args");
+                    if (ignoreDebugOutput) {
+                        removeDebugOutputArguments(secondEventArgumentsObject);
+                    }
+                    secondEventArguments = secondEventArgumentsObject.toJSONString();
                     if (ignoreProfilingEvents && secondEventName.startsWith(ProfilingEvent.profilingEventPrefix)) {
                         // Skip profiling events
                         secondEventName = null;

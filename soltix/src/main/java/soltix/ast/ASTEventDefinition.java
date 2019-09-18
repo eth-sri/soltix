@@ -32,6 +32,8 @@ public class ASTEventDefinition extends ASTNode {
         this.isAnonymous = isAnonymous;
     }
 
+    public ASTParameterList getParameterList() { return parameterList; }
+
     @Override
     public String toSolidityCode() throws Exception {
         String code = "event " + name + "(" + parameterList.toSolidityCode() + ")";

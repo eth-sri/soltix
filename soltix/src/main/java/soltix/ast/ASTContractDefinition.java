@@ -45,6 +45,8 @@ public class ASTContractDefinition extends ASTNode implements Comparable {
     private HashMap<String, ASTEnumDefinition> enumDefinitionsByName = new HashMap<String, ASTEnumDefinition>();
     private HashMap<String, ASTEnumDefinition> enumDefinitionsByCanonicalName = new HashMap<String, ASTEnumDefinition>();
 
+    private HashMap<String, ASTEventDefinition> eventDefinitionsByName = new HashMap<String, ASTEventDefinition>();
+
     private ArrayList<ASTContractDefinition> inheritedBy = null;
 
     // Structure references that require helper variable generation
@@ -175,6 +177,22 @@ public class ASTContractDefinition extends ASTNode implements Comparable {
         return result;
     }
 
+    public ASTEventDefinition getEventDefinition(String name) {
+        ASTEventDefinition result = eventDefinitionsByName.get(name);
+
+        if (result == null && inherits != null) {
+            // Try base contract(s)
+            for (ASTInheritanceSpecifier baseContract : inherits) {
+                result = baseContract.getContract().getEventDefinition(name);
+                if (result != null) {
+                    // Found
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
     public ArrayList<ASTNode> getVariables() { return variables; }
 
     public void addInheritedBy(ASTContractDefinition contract) {
@@ -262,6 +280,9 @@ public class ASTContractDefinition extends ASTNode implements Comparable {
                 ASTEnumDefinition definition = (ASTEnumDefinition)getChild(i);
                 enumDefinitionsByName.put(definition.getName(), definition);
                 enumDefinitionsByCanonicalName.put(definition.getCanonicalName(), definition);
+            } else if (getChild(i) instanceof  ASTEventDefinition) {
+                ASTEventDefinition definition = (ASTEventDefinition)getChild(i);
+                eventDefinitionsByName.put(definition.getName(), definition);
             }
         }
 

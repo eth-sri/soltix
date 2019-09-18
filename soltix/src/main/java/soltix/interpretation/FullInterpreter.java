@@ -243,12 +243,14 @@ public class FullInterpreter implements IInterpreterCallback {
         ASTFunctionCall functionCall = emitStatement.getFunctionCall();
         VariableEnvironment currentVariableEnvironment = currentStackFrame().getScope().getVariableEnvironment();
         ArrayList<Expression> arguments = functionCall.getExpressionArguments(currentVariableEnvironment);
+        ASTEventDefinition eventDefinition = currentStackFrame().getContract().getEventDefinition(emitStatement.getName());
+        ArrayList<ASTVariableDeclaration> eventParamters = eventDefinition.getParameterList().toArrayList();
+
         for (int i = 0 ; i < arguments.size(); ++i) {
             System.out.println("  arg " + i + " " + arguments.get(i).toASTNode().toSolidityCode());
 
             Value result = expressionEvaluator.evaluateForAll(currentVariableEnvironment, arguments.get(i)).values.get(0);
-            // TODO Event argument name
-            argsObject.put("a", JSONValueConverter.objectFromValue(result));
+            argsObject.put(eventParamters.get(i).getName(), JSONValueConverter.objectFromValue(result));
         }
 
         eventObject.put("args", argsObject);
