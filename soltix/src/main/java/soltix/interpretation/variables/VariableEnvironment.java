@@ -353,7 +353,7 @@ public class VariableEnvironment {
         }
         VariableValues variableValues = variables.get(variableName);
         if (variableValues == null) {
-            throw new Exception("VariableEnvironment.resolveVariableValue: Cannot locate variable " + variableName + " in variable environment");
+            throw new Exception("VariableEnvironment.resolveVariableValue: Cannot locate variable " + variableName + " in variable environment " + this);
         }
         return variableValues.getValue(valueSetIndex);
     }

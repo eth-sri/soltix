@@ -37,6 +37,10 @@ public class ASTReturnStatement extends ASTNode {
     @Override
     public String toSolidityCodePostfix() { return null; }
 
+    public ASTNode getArgument() {
+        return argument;
+    }
+
     @Override
     public void finalize() throws Exception {
         if (getChildCount() > 1) {

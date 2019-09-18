@@ -300,7 +300,7 @@ public class ASTInterpreter {
         if (callbackObject.getNavigationPolicy() == NavigationPolicy.NAVIGATION_POLICY_DESCEND_ALL) {
             callbackObject.visitNodeBeforeProcessing(currentNode);
 
-            scope.enterNode(currentNode);
+            scope.enterNode(currentNode, null); // We do not record values here, so no initializer is given
 
             // Depth-first child node traversal for all paths
             for (int i = 0; i < currentNode.getChildCount(); ++i) {

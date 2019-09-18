@@ -21,7 +21,9 @@
 package soltix.interpretation;
 
 import soltix.ast.*;
+import soltix.interpretation.values.Value;
 import soltix.interpretation.variables.*;
+import soltix.util.Util;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -35,6 +37,8 @@ public class Scope {
     // be ambiguous due to hidden outer declarations)
     private HashMap<Long, Variable> variablesById = new HashMap<Long, Variable>();
     private HashMap<String, Variable> variablesByName = new HashMap<String, Variable>();
+    // During interpretation, a scope may be instantiated with a VariableEnvironment containing values for the variables
+    private VariableEnvironment variableEnvironment = null;
 
     private ASTContractDefinition contract = null;
     private FunctionScope currentFunction = null; // function or modifier definition
@@ -61,13 +65,20 @@ public class Scope {
     public Scope(ASTContractDefinition contract) throws Exception {
         // Initialize scope with all variables declared in the contract
         this.contract = contract;
-        for (ASTNode variable : contract.getVariables()) {
-            enterNode(variable);
+        for (ASTNode variable : contract.getVariables()) { // TODO better solution? This meshes global + given scope
+            enterNode(variable, getInitializer(variable));
         }
     }
 
+    public void setVariableEnvironment(VariableEnvironment variableEnvironment) {
+        this.variableEnvironment = variableEnvironment;
+    }
 
-    protected void addVariableToScope(ASTNode node) throws Exception {
+    public VariableEnvironment getVariableEnvironment() {
+        return variableEnvironment;
+    }
+
+    protected void addVariableToScope(ASTNode node, Value initializer) throws Exception {
         ASTVariableDeclaration declaration;
 
         if (node instanceof ASTVariableDeclaration) {
@@ -96,16 +107,37 @@ public class Scope {
         } else {
             variablesByName.put(declaration.getName(), variable);
         }
+
+        if (variableEnvironment != null) {
+            if (initializer == null) {
+                // TODO use default initializer, unify this with other unimplemented initializer part
+                System.out.println("cannot add " + declaration.getName());
+                Util.unimpl();
+            }
+            VariableValues values = new VariableValues(variable, 0);
+            values.addValue(initializer);
+            variableEnvironment.addVariableValues(variable, values);
+        }
     }
 
-    public void enterNode(ASTNode node) throws Exception {
+    private static Value getInitializer(ASTNode node) {
+        if (node instanceof  ASTVariableDeclaration) {
+            return ((ASTVariableDeclaration)node).getInitializerValue();
+        } else if (node instanceof  ASTVariableDeclarationStatement) {
+            return ((ASTVariableDeclarationStatement)node).getDeclaration().getInitializerValue();
+        } else {
+            return null;
+        }
+    }
+
+    public void enterNode(ASTNode node, Value initializer) throws Exception {
         if (variablesById.containsKey(node.getID())) {
             throw new Exception("AST node " + node.getID() + " already contained in scope");
         }
         if (node instanceof ASTVariableDeclaration) {
-            addVariableToScope(node);
+            addVariableToScope(node, initializer);
         } else if (node instanceof ASTVariableDeclarationStatement) {
-            addVariableToScope(node);
+            addVariableToScope(node, initializer);
         } else if (node instanceof ASTFunctionDefinition || node instanceof ASTModifierDefinition) {
             currentFunction = (FunctionScope)node;
 
@@ -114,16 +146,15 @@ public class Scope {
             // Add parameters to scope
             for (int i = 0; i < parameters.getChildCount(); ++i) {
                 ASTNode child = parameters.getChild(i);
-                if (!child.getName().equals("")) {
-                    // No point in tracking unnamed arguments
-                    addVariableToScope(child);
+                if (!child.getName().equals("")) { // No point in tracking unnamed arguments
+                    addVariableToScope(child, getInitializer(child)); // TODO convert type if needed
                 }
             }
         } else if (node instanceof ASTForStatement) {
             ASTForStatement forStatement = (ASTForStatement)node;
             ASTNode initPart = forStatement.getInitPart();
             if (initPart instanceof ASTVariableDeclaration || initPart instanceof ASTVariableDeclarationStatement) {
-                addVariableToScope(initPart);
+                addVariableToScope(initPart, getInitializer(initPart));
             }
         }
     }

@@ -23,6 +23,7 @@ package soltix.interpretation;
 import soltix.Configuration;
 import soltix.ast.*;
 import soltix.interpretation.expressions.Expression;
+import soltix.interpretation.expressions.ExpressionBuilder;
 import soltix.interpretation.expressions.ExpressionEvaluationErrorHandler;
 import soltix.interpretation.expressions.ExpressionEvaluator;
 import soltix.interpretation.values.IntegerValue;
@@ -37,6 +38,7 @@ import org.json.simple.JSONObject;
 import soltix.util.Util;
 
 import java.io.FileWriter;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Stack;
 
@@ -106,18 +108,25 @@ public class FullInterpreter implements IInterpreterCallback {
     protected SolidityStackFrame currentStackFrame() { return callStack.peek(); }
 
     public Value interpretTransaction(Transaction transaction) throws Exception {
-        initializeLocalEnvironment();
-
         // Set up initial stack frame
+        VariableEnvironment localVariableEnvironment = new VariableEnvironment(ast, true);
         SolidityStackFrame stackFrame = new SolidityStackFrame(transaction.getContract(),
                                                                 transaction.getFunction(),
-                                                                transaction.getArguments());
+                                                                transaction.getArguments(),
+                                                                localVariableEnvironment);
+
+        initializeLocalFunctionEnvironment(stackFrame, transaction);
+
         callStack.push(stackFrame);
 
         ASTNode startNode = transaction.getFunction();
         ast.setCurrentNode(startNode);
 
         Value result = doInterpret();
+
+        uninitializeLocalFunctionEnvironment(stackFrame, transaction);
+
+        callStack.pop();
         return result;
     }
 
@@ -150,9 +159,28 @@ public class FullInterpreter implements IInterpreterCallback {
         }
     }
 
-    protected void initializeLocalEnvironment() {
+    protected void initializeLocalFunctionEnvironment(SolidityStackFrame stackFrame, Transaction transaction) throws Exception {
+        ArrayList<ASTVariableDeclaration> parameterList = transaction.getFunction().getParameterList().toArrayList();
+        for (int i = 0; i < parameterList.size(); ++i) {
+            ASTVariableDeclaration parameter = parameterList.get(i);
+           // Variable variable = new Variable(parameter);
+           // VariableValues variableValues = new VariableValues(variable, 0);
+
+            // Initialize parameter with corresponding argument (no type conversion - assume correct type)
+            // TODO this probably does require a conversion due to the lack of tx input format expressiveness
+           // variableValues.addValue();
+           // stackFrame.getScope().enterNode(parameter, transaction.getArguments().get(i));
+            parameter.setInitializerValue(transaction.getArguments().get(i));
+        }
     }
 
+    protected void uninitializeLocalFunctionEnvironment(SolidityStackFrame stackFrame, Transaction transaction) throws Exception {
+        ArrayList<ASTVariableDeclaration> parameterList = transaction.getFunction().getParameterList().toArrayList();
+        for (int i = 0; i < parameterList.size(); ++i) {
+            ASTVariableDeclaration parameter = parameterList.get(i);
+            stackFrame.getScope().leaveNode(parameter);
+        }
+    }
 
 
     protected Value doInterpret() throws Exception {
@@ -160,7 +188,7 @@ public class FullInterpreter implements IInterpreterCallback {
         Scope currentScope = currentStackFrame().getScope();
 
         currentNode.setCovered(true);
-        currentScope.enterNode(currentNode);
+        currentScope.enterNode(currentNode, null); // TODO initializer?
 
         Value returnValue = null;
 
@@ -169,7 +197,9 @@ public class FullInterpreter implements IInterpreterCallback {
             body.setCovered(true);
             returnValue = interpretChildNodes(body);
         } else if (currentNode instanceof ASTEmitStatement) {
-            interpretEmitStatement((ASTEmitStatement)currentNode);
+            interpretEmitStatement((ASTEmitStatement) currentNode);
+        } else if (currentNode instanceof ASTReturnStatement) {
+            interpretReturnStatement((ASTReturnStatement)currentNode);
         } else {
             throw new Exception("FullInterpreter.doInterpret for unimplemented node type " + currentNode.getClass().toString());
         }
@@ -211,15 +241,24 @@ public class FullInterpreter implements IInterpreterCallback {
 
         // Evaluate arguments
         ASTFunctionCall functionCall = emitStatement.getFunctionCall();
-        ArrayList<Expression> arguments = functionCall.getExpressionArguments(globalEnvironment);
+        VariableEnvironment currentVariableEnvironment = currentStackFrame().getScope().getVariableEnvironment();
+        ArrayList<Expression> arguments = functionCall.getExpressionArguments(currentVariableEnvironment);
         for (int i = 0 ; i < arguments.size(); ++i) {
             System.out.println("  arg " + i + " " + arguments.get(i).toASTNode().toSolidityCode());
 
-            Value result = expressionEvaluator.evaluateForAll(globalEnvironment, arguments.get(i)).values.get(0);
+            Value result = expressionEvaluator.evaluateForAll(currentVariableEnvironment, arguments.get(i)).values.get(0);
             // TODO Event argument name
             argsObject.put("a", JSONValueConverter.objectFromValue(result));
         }
 
         eventObject.put("args", argsObject);
+    }
+
+    protected void interpretReturnStatement(ASTReturnStatement returnStatement) throws Exception {
+        // Evaluate argument
+        VariableEnvironment currentVariableEnvironment = currentStackFrame().getScope().getVariableEnvironment();
+        Value result = expressionEvaluator.evaluateForAll(currentVariableEnvironment,
+                            ExpressionBuilder.fromASTNode(currentVariableEnvironment, returnStatement.getArgument())).values.get(0);
+        currentStackFrame().setReturnValue(result);
     }
 }
