@@ -56,7 +56,7 @@ public class FullInterpreter implements IInterpreterCallback {
     public FullInterpreter(ArrayList<Transaction> transactions) {
         this.transactions = transactions;
         // TODO Supply proper error handler policy to ensure stability for preceding iterations
-        expressionEvaluator = new ExpressionEvaluator(new ExpressionEvaluationErrorHandler(new RandomNumbers(Configuration.randomNumbersSeed)));
+        expressionEvaluator = new ExpressionEvaluator(new ExpressionEvaluationErrorHandler(new RandomNumbers(Configuration.randomNumbersSeed)), this);
     }
 
     public void initialize(ASTInterpreter astInterpreter) {
@@ -109,13 +109,13 @@ public class FullInterpreter implements IInterpreterCallback {
 
     public Value interpretTransaction(Transaction transaction) throws Exception {
         // Set up initial stack frame
-        VariableEnvironment localVariableEnvironment = new VariableEnvironment(ast, true);
         SolidityStackFrame stackFrame = new SolidityStackFrame(transaction.getContract(),
                                                                 transaction.getFunction(),
                                                                 transaction.getArguments(),
-                                                                localVariableEnvironment);
+                                                                ast
+                                                                /*localVariableEnvironment*/);
 
-        initializeLocalFunctionEnvironment(stackFrame, transaction);
+        initializeLocalFunctionEnvironment(stackFrame, transaction.getFunction(), transaction.getArguments()); // transaction);
 
         callStack.push(stackFrame);
 
@@ -124,7 +124,7 @@ public class FullInterpreter implements IInterpreterCallback {
 
         Value result = doInterpret();
 
-        uninitializeLocalFunctionEnvironment(stackFrame, transaction);
+        uninitializeLocalFunctionEnvironment(stackFrame, transaction.getFunction()); //transaction);
 
         callStack.pop();
         return result;
@@ -159,8 +159,10 @@ public class FullInterpreter implements IInterpreterCallback {
         }
     }
 
-    protected void initializeLocalFunctionEnvironment(SolidityStackFrame stackFrame, Transaction transaction) throws Exception {
-        ArrayList<ASTVariableDeclaration> parameterList = transaction.getFunction().getParameterList().toArrayList();
+    protected void initializeLocalFunctionEnvironment(SolidityStackFrame stackFrame, /* Transaction transaction*/
+                                                      ASTFunctionDefinition functionDefinition,
+                                                      ArrayList<Value> arguments) throws Exception {
+        ArrayList<ASTVariableDeclaration> parameterList = /*transaction.getFunction()*/functionDefinition.getParameterList().toArrayList();
         for (int i = 0; i < parameterList.size(); ++i) {
             ASTVariableDeclaration parameter = parameterList.get(i);
            // Variable variable = new Variable(parameter);
@@ -170,12 +172,13 @@ public class FullInterpreter implements IInterpreterCallback {
             // TODO this probably does require a conversion due to the lack of tx input format expressiveness
            // variableValues.addValue();
            // stackFrame.getScope().enterNode(parameter, transaction.getArguments().get(i));
-            parameter.setInitializerValue(transaction.getArguments().get(i));
+            parameter.setInitializerValue(/*transaction.getArguments()*/ arguments.get(i));
         }
     }
 
-    protected void uninitializeLocalFunctionEnvironment(SolidityStackFrame stackFrame, Transaction transaction) throws Exception {
-        ArrayList<ASTVariableDeclaration> parameterList = transaction.getFunction().getParameterList().toArrayList();
+    protected void uninitializeLocalFunctionEnvironment(SolidityStackFrame stackFrame, /*Transaction transaction*/
+                                                        ASTFunctionDefinition functionDefinition) throws Exception {
+        ArrayList<ASTVariableDeclaration> parameterList = /*transaction.getFunction()*/functionDefinition.getParameterList().toArrayList();
         for (int i = 0; i < parameterList.size(); ++i) {
             ASTVariableDeclaration parameter = parameterList.get(i);
             stackFrame.getScope().leaveNode(parameter);
@@ -193,9 +196,7 @@ public class FullInterpreter implements IInterpreterCallback {
         Value returnValue = null;
 
         if (currentNode instanceof ASTFunctionDefinition) {
-            ASTBlock body = ((ASTFunctionDefinition) currentNode).getBody();
-            body.setCovered(true);
-            returnValue = interpretChildNodes(body);
+            returnValue = interpretFunctionCall((ASTFunctionDefinition) currentNode);
         } else if (currentNode instanceof ASTEmitStatement) {
             interpretEmitStatement((ASTEmitStatement) currentNode);
         } else if (currentNode instanceof ASTReturnStatement) {
@@ -215,6 +216,12 @@ public class FullInterpreter implements IInterpreterCallback {
         //ast.setCurrentNode(currentNode);
         //currentScope.leaveNode(currentNode);
         return returnValue;
+    }
+
+    protected Value interpretFunctionCall(ASTFunctionDefinition functionDefinition) throws Exception {
+        ASTBlock body = functionDefinition.getBody();
+        body.setCovered(true);
+        return interpretChildNodes(body);
     }
 
     // Depth-first child node traversal for all paths
@@ -242,13 +249,12 @@ public class FullInterpreter implements IInterpreterCallback {
         // Evaluate arguments
         ASTFunctionCall functionCall = emitStatement.getFunctionCall();
         VariableEnvironment currentVariableEnvironment = currentStackFrame().getScope().getVariableEnvironment();
-        ArrayList<Expression> arguments = functionCall.getExpressionArguments(currentVariableEnvironment);
+        ArrayList<Expression> arguments = functionCall.getExpressionArguments(currentStackFrame().getContract(), currentVariableEnvironment);
+
         ASTEventDefinition eventDefinition = currentStackFrame().getContract().getEventDefinition(emitStatement.getName());
         ArrayList<ASTVariableDeclaration> eventParamters = eventDefinition.getParameterList().toArrayList();
 
         for (int i = 0 ; i < arguments.size(); ++i) {
-            System.out.println("  arg " + i + " " + arguments.get(i).toASTNode().toSolidityCode());
-
             Value result = expressionEvaluator.evaluateForAll(currentVariableEnvironment, arguments.get(i)).values.get(0);
             argsObject.put(eventParamters.get(i).getName(), JSONValueConverter.objectFromValue(result));
         }
@@ -260,7 +266,9 @@ public class FullInterpreter implements IInterpreterCallback {
         // Evaluate argument
         VariableEnvironment currentVariableEnvironment = currentStackFrame().getScope().getVariableEnvironment();
         Value result = expressionEvaluator.evaluateForAll(currentVariableEnvironment,
-                            ExpressionBuilder.fromASTNode(currentVariableEnvironment, returnStatement.getArgument())).values.get(0);
+                            ExpressionBuilder.fromASTNode(currentStackFrame().getContract(),
+                                                          currentVariableEnvironment,
+                                                          returnStatement.getArgument())).values.get(0);
         currentStackFrame().setReturnValue(result);
     }
 }

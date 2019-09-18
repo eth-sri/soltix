@@ -20,13 +20,16 @@
 
 package soltix.interpretation.expressions;
 
+import com.sun.org.apache.xml.internal.utils.UnImplNode;
 import soltix.ast.*;
+import soltix.interpretation.FullInterpreter;
 import soltix.interpretation.Type;
 import soltix.interpretation.TypeContainer;
 import soltix.interpretation.values.*;
 import soltix.interpretation.variables.Variable;
 import soltix.interpretation.variables.VariableEnvironment;
 import soltix.util.Hash;
+import soltix.util.Util;
 
 import java.util.ArrayList;
 
@@ -52,9 +55,12 @@ public class ExpressionEvaluator {
     //private AST ast;
     static public boolean freeIntermediateResults = false; //true;
     private IExpressionEvaluatorErrorCallback evaluatorErrorCallback;
+    private FullInterpreter interpreter = null;
 
-    public ExpressionEvaluator(IExpressionEvaluatorErrorCallback evaluatorErrorCallback) { //AST ast) {
+    public ExpressionEvaluator(IExpressionEvaluatorErrorCallback evaluatorErrorCallback,
+                               FullInterpreter interpreter) { //AST ast) {
         this.evaluatorErrorCallback = evaluatorErrorCallback;
+        this.interpreter = interpreter;
     }
 
 
@@ -344,8 +350,14 @@ public class ExpressionEvaluator {
                         }
                     } else {
                         resultValues = new ComputedValues();
-                        resultValues.values.add(evaluateKeccak256ForOne((StringValue)argumentValues.values.get(0)));
+                        resultValues.values.add(evaluateKeccak256ForOne((StringValue) argumentValues.values.get(0)));
                     }
+                } else if (interpreter != null) {
+                    // This call can be interpreted
+                    //interpreter.interpretFunctionCall
+
+                    Util.unimpl();
+                    throw new Exception("unimpl");
                 } else {
                     throw new Exception("Attempt to evaluate unimplemented function " + identifier.getName());
                 }

@@ -52,7 +52,7 @@ public class PredicateGenerator {
         this.prng = prng;
         this.ast = ast;
         this.astEditor = astEditor;
-        expressionEvaluator = new ExpressionEvaluator(new ExpressionEvaluationErrorHandler(prng)); //ast);
+        expressionEvaluator = new ExpressionEvaluator(new ExpressionEvaluationErrorHandler(prng), null); //ast);
     }
 
     protected Expression debugVerifyResult(VariableEnvironment environment, Expression result, boolean expectedValue) throws Exception {

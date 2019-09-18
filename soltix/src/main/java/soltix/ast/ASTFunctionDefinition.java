@@ -21,6 +21,8 @@ package soltix.ast;
 
 import soltix.Configuration;
 import soltix.synthesis.FunctionGenerator;
+import soltix.util.Util;
+
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -83,6 +85,19 @@ public class ASTFunctionDefinition extends FunctionScope {
     public boolean isConstructor() { return isConstructor; }
     public ArrayList<ASTModifierInvocation> getModifiers() { return modifierInvocations; }
     public ASTContractDefinition getContract() { return (ASTContractDefinition)getParent(); }
+
+    public ASTNode getReturnType() {
+        if (returnList == null) {
+            return null;
+        }
+
+        ArrayList<ASTVariableDeclaration> returnArrayList = returnList.toArrayList();
+        if (returnArrayList.size() > 1) {
+            // Tuple type?!
+            Util.unimpl();
+        }
+        return returnArrayList.get(0).getTypeName();
+    }
 
     @Override
     public String toSolidityCode() throws Exception {

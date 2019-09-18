@@ -25,6 +25,7 @@ import soltix.interpretation.values.Value;
 import soltix.interpretation.variables.Variable;
 import soltix.interpretation.variables.VariableEnvironment;
 import soltix.output.Console;
+import soltix.util.Util;
 
 import java.util.ArrayList;
 
@@ -34,7 +35,9 @@ import java.util.ArrayList;
  * TODO complete this
  */
 public class ExpressionBuilder {
-    public static Expression fromASTNode(VariableEnvironment environment, ASTNode astNode) throws Exception {
+    public static Expression fromASTNode(ASTContractDefinition contractDefinition,
+                                         VariableEnvironment environment,
+                                         ASTNode astNode) throws Exception {
         Expression result = null;
 
         if (astNode instanceof ASTLiteral) {
@@ -57,8 +60,29 @@ public class ExpressionBuilder {
                 if (arguments.size() != 1) {
                     throw new Exception("Unexpected elementary type name conversion argument count (not 1): " + arguments.size());
                 }
-                Expression toConvert = fromASTNode(environment, arguments.get(0));
+                Expression toConvert = fromASTNode(contractDefinition, environment, arguments.get(0));
                 result = new Expression(toConvert, functionCall.getCalled()); // type conversion expression
+            } else {
+                // TODO
+                //   - create ordinary function call expression
+                //   - adapt expression evaluator to call back to interpreter for stack frame creation etc
+                //   - embed return value in expression evaluation
+
+                // Look up called function (note: function declarations without body are also ASTFunctionDefinitions)
+                ASTFunctionDefinition functionDefinition = contractDefinition.getFunction(functionCall.getCalled().getName());
+
+                if (functionDefinition == null) {
+                    Console.error(functionCall, "Cannot locate function '" + functionCall.getCalled().getName()
+                            + "', in call " + functionCall.toSolidityCode());
+                    throw new Exception("ExpressionBuilder.fromASTNode failed");
+                }
+                ArrayList<Expression> arguments = functionCall.getExpressionArguments(contractDefinition, environment);
+
+                ASTNode returnType = functionDefinition.getReturnType();
+
+                // Build Expression objects for all function arguments
+                Expression callExpression = new Expression(functionCall, arguments, returnType);
+                result = callExpression;
             }
         }
         /*else if (astNode instanceof ASTUnaryOperation) {

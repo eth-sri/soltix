@@ -65,7 +65,7 @@ public class ExpressionEvaluatorTest extends UtilExpressionTests {
         environment.finishAddingValues();
 
         // Prepare expression evaluation
-        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null); //null);
+        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null, null); //null);
 
 
         // Build expression "true? ++x: --y"
@@ -236,7 +236,7 @@ public class ExpressionEvaluatorTest extends UtilExpressionTests {
         environment.finishAddingValues();
 
         // Prepare expression evaluation
-        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null); //null);
+        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null, null); //null);
         e_expressionEvaluator = expressionEvaluator;
 
 
@@ -313,7 +313,7 @@ public class ExpressionEvaluatorTest extends UtilExpressionTests {
         environment.finishAddingValues();
 
         // Prepare expression evaluation
-        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null); //null);
+        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null, null); //null);
         e_expressionEvaluator = expressionEvaluator;
 
 
@@ -369,7 +369,7 @@ public class ExpressionEvaluatorTest extends UtilExpressionTests {
         e_environment = environment;
 
         // Prepare expression evaluation
-        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null); //null);
+        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null, null); //null);
         e_expressionEvaluator = expressionEvaluator;
 
         ASTNode integerType = TypeContainer.getIntegerType(false, 200);
@@ -400,7 +400,7 @@ public class ExpressionEvaluatorTest extends UtilExpressionTests {
         e_environment = environment;
 
         // Prepare expression evaluation
-        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null); //null);
+        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null, null); //null);
         e_expressionEvaluator = expressionEvaluator;
 
         ASTNode integerType = TypeContainer.getIntegerType(true, 224);
@@ -430,7 +430,7 @@ public class ExpressionEvaluatorTest extends UtilExpressionTests {
         e_environment = environment;
 
         // Prepare expression evaluation
-        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null); //null);
+        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null, null); //null);
         e_expressionEvaluator = expressionEvaluator;
 
         ASTNode typeInt184 = TypeContainer.getIntegerType(true, 184);
@@ -477,7 +477,7 @@ public class ExpressionEvaluatorTest extends UtilExpressionTests {
         e_environment = environment;
 
         // Prepare expression evaluation
-        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null); //null);
+        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null, null); //null);
         e_expressionEvaluator = expressionEvaluator;
 
         ASTNode typeUint184 = TypeContainer.getIntegerType(false, 184);
@@ -509,7 +509,7 @@ public class ExpressionEvaluatorTest extends UtilExpressionTests {
         e_environment = environment;
 
         // Prepare expression evaluation
-        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null); //null);
+        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null, null); //null);
         e_expressionEvaluator = expressionEvaluator;
 
         ASTNode typeInt32 = TypeContainer.getIntegerType(true, 32);
@@ -542,7 +542,7 @@ public class ExpressionEvaluatorTest extends UtilExpressionTests {
         e_environment = environment;
 
         // Prepare expression evaluation
-        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null); //null);
+        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null, null); //null);
         e_expressionEvaluator = expressionEvaluator;
 
         ASTNode bytes7Type = TypeContainer.getByteType(7);
@@ -634,7 +634,7 @@ public class ExpressionEvaluatorTest extends UtilExpressionTests {
         VariableEnvironment environment = new VariableEnvironment(null, true);
         e_environment = environment;
 
-        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null);
+        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null, null);
         e_expressionEvaluator = expressionEvaluator;
 
         StringValue stringValue = new StringValue("\\u00f0");

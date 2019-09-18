@@ -53,11 +53,11 @@ public class ASTFunctionCall extends ASTNode {
     public ArrayList<ASTNode> getArguments() { return arguments; }
 
     // Convert the ASTNode representation of an expression to an Expression object
-    public ArrayList<Expression> getExpressionArguments(VariableEnvironment environment) throws Exception {
+    public ArrayList<Expression> getExpressionArguments(ASTContractDefinition contract, VariableEnvironment environment) throws Exception {
         if (expressionArguments == null) {
             expressionArguments = new ArrayList<Expression>();
             for (ASTNode argument : arguments) {
-                Expression expressionArgument = ExpressionBuilder.fromASTNode(environment, argument);
+                Expression expressionArgument = ExpressionBuilder.fromASTNode(contract, environment, argument);
                 expressionArguments.add(expressionArgument);
             }
         }

@@ -66,7 +66,7 @@ public class ExpressionGenerator {
         this.predicateGenerator = predicateGenerator;
         this.prng = prng;
         expressionTypeChecker = new ExpressionTypeChecker(ast);
-        expressionEvaluator = new ExpressionEvaluator(new ExpressionEvaluationErrorHandler(prng)); //ast);
+        expressionEvaluator = new ExpressionEvaluator(new ExpressionEvaluationErrorHandler(prng), null); //ast);
         typeConverter = new TypeConverter(ast, prng, expressionEvaluator);
         expressionTypeConverter = new ExpressionTypeConverter(ast, expressionEvaluator, typeConverter);
         valueGenerator = new ValueGenerator(prng);

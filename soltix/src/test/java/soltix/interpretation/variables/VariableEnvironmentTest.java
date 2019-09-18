@@ -86,7 +86,7 @@ public class VariableEnvironmentTest extends UtilExpressionTests {
 
 
         // Prepare expression evaluation
-        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null); //null);
+        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(null, null); //null);
         e_expressionEvaluator = expressionEvaluator;
 
         Expression incrementExpression = new Expression(ASTUnaryOperation.Operator.OP_INC_PRE,

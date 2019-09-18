@@ -65,7 +65,7 @@ public class LiveEMIMutator implements IMutator {
         functionGenerator = new FunctionGenerator(ast, prng, null /*not needed*/, null /*not needed*/);
         expressionGenerator = new ExpressionGenerator(ast, predicateGenerator, functionGenerator, prng);
 
-        expressionEvaluator = new ExpressionEvaluator(new ExpressionEvaluationErrorHandler(prng));
+        expressionEvaluator = new ExpressionEvaluator(new ExpressionEvaluationErrorHandler(prng), null);
         typeConverter = new TypeConverter(ast, prng, expressionEvaluator);
         statementGenerator = new StatementGenerator(ast, prng, expressionGenerator, structTypeGenerator, typeConverter, false);
     }

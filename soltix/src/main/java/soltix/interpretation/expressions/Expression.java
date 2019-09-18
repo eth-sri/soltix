@@ -323,7 +323,6 @@ public class Expression {
     }
 
 
-
     public Expression(Expression operand, ASTNode castExpressionType) {
         this.firstOperand = operand;
         this.castExpressionType = castExpressionType;

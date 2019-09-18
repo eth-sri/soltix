@@ -20,6 +20,7 @@
 
 package soltix.interpretation;
 
+import soltix.ast.AST;
 import soltix.ast.ASTContractDefinition;
 import soltix.ast.ASTFunctionDefinition;
 import soltix.interpretation.values.Value;
@@ -37,11 +38,13 @@ public class SolidityStackFrame {
     public SolidityStackFrame(ASTContractDefinition contract,
                               ASTFunctionDefinition function,
                               ArrayList<Value> arguments,
-                              VariableEnvironment localVariableEnvironment) throws Exception {
+                              AST ast/*,
+                              VariableEnvironment localVariableEnvironment*/) throws Exception {
         this.contract = contract;
         this.function = function;
         this.arguments = arguments;
         scope = new Scope(contract);
+        VariableEnvironment localVariableEnvironment = new VariableEnvironment(ast, true);
         scope.setVariableEnvironment(localVariableEnvironment);
     }
 

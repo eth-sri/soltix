@@ -86,7 +86,7 @@ public class FunctionGenerator {
         astEditor = new ASTEditor(ast);
         predicateGenerator = new PredicateGenerator(ast, astEditor, prng);
         expressionGenerator = new ExpressionGenerator(ast, predicateGenerator, this, prng);
-        expressionEvaluator = new ExpressionEvaluator(new ExpressionEvaluationErrorHandler(prng));
+        expressionEvaluator = new ExpressionEvaluator(new ExpressionEvaluationErrorHandler(prng), null);
         typeConverter = new TypeConverter(ast, prng, expressionEvaluator);
         statementGenerator = new StatementGenerator(ast, prng, expressionGenerator, structTypeGenerator, typeConverter, true);
     }

@@ -57,7 +57,7 @@ public class ExpressionEvaluationErrorHandlerTest extends UtilExpressionTests {
 
         // Prepare expression evaluation
         RandomNumbers prng = new RandomNumbers(1);
-        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(new ExpressionEvaluationErrorHandler(prng)); //null);
+        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(new ExpressionEvaluationErrorHandler(prng), null); //null);
         e_expressionEvaluator = expressionEvaluator;
 
 
@@ -90,7 +90,7 @@ public class ExpressionEvaluationErrorHandlerTest extends UtilExpressionTests {
 
         // Prepare expression evaluation
         RandomNumbers prng = new RandomNumbers(1);
-        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(new ExpressionEvaluationErrorHandler(prng)); //null);
+        ExpressionEvaluator expressionEvaluator = new ExpressionEvaluator(new ExpressionEvaluationErrorHandler(prng), null); //null);
         e_expressionEvaluator = expressionEvaluator;
 
         ASTNode int8Type = TypeContainer.getIntegerType(true, 8);
