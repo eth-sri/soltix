@@ -33,6 +33,7 @@ public class ASTUnaryOperation extends ASTNode {
     }
 
     public Operator getOperator() { return operator; }
+    public ASTNode getOperand() { return operand; }
 
     public enum Operator {
         OP_LNEG("!", true),

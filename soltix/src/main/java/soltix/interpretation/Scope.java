@@ -21,6 +21,8 @@
 package soltix.interpretation;
 
 import soltix.ast.*;
+import soltix.interpretation.expressions.Expression;
+import soltix.interpretation.expressions.ExpressionBuilder;
 import soltix.interpretation.values.Value;
 import soltix.interpretation.variables.*;
 import soltix.util.Util;
@@ -39,6 +41,9 @@ public class Scope {
     private HashMap<String, Variable> variablesByName = new HashMap<String, Variable>();
     // During interpretation, a scope may be instantiated with a VariableEnvironment containing values for the variables
     private VariableEnvironment variableEnvironment = null;
+    // Some scope operations require interpretations for variable initializers.
+    // TODO this should probably be restructured, but for now we pass an interpreter callback
+    private FullInterpreter interpreterCallback = null;
 
     private ASTContractDefinition contract = null;
     private FunctionScope currentFunction = null; // function or modifier definition
@@ -62,11 +67,12 @@ public class Scope {
         return currentFunction.currentFunctionVariableLookup(name);
     }
 
-    public Scope(ASTContractDefinition contract) throws Exception {
+    public Scope(ASTContractDefinition contract, FullInterpreter interpreterCallback) throws Exception {
         // Initialize scope with all variables declared in the contract
         this.contract = contract;
+        this.interpreterCallback = interpreterCallback;
         for (ASTNode variable : contract.getVariables()) { // TODO better solution? This meshes global + given scope
-            enterNode(variable, getInitializer(variable));
+            enterNode(variable, getInitializer(variable, interpreterCallback));
         }
     }
 
@@ -120,11 +126,18 @@ public class Scope {
         }
     }
 
-    private static Value getInitializer(ASTNode node) {
+    private Value getInitializer(ASTNode node, FullInterpreter interpreterCallback) throws Exception {
         if (node instanceof  ASTVariableDeclaration) {
             return ((ASTVariableDeclaration)node).getInitializerValue();
         } else if (node instanceof  ASTVariableDeclarationStatement) {
-            return ((ASTVariableDeclarationStatement)node).getDeclaration().getInitializerValue();
+            if (interpreterCallback != null) {
+                // Evaluate initializer expression
+                ASTNode initializerCode = ((ASTVariableDeclarationStatement) node).getInitializer();
+                Value initializerValue = interpreterCallback.interpretNode(initializerCode);
+                return initializerValue;
+            } else {
+                return null;
+            }
         } else {
             return null;
         }
@@ -135,9 +148,9 @@ public class Scope {
             throw new Exception("AST node " + node.getID() + " already contained in scope");
         }
         if (node instanceof ASTVariableDeclaration) {
-            addVariableToScope(node, initializer);
+            addVariableToScope(node, getInitializer(node, interpreterCallback)); //);
         } else if (node instanceof ASTVariableDeclarationStatement) {
-            addVariableToScope(node, initializer);
+            addVariableToScope(node, getInitializer(node, interpreterCallback)); //initializer);
         } else if (node instanceof ASTFunctionDefinition || node instanceof ASTModifierDefinition) {
             currentFunction = (FunctionScope)node;
 
@@ -156,7 +169,7 @@ public class Scope {
             ASTForStatement forStatement = (ASTForStatement)node;
             ASTNode initPart = forStatement.getInitPart();
             if (initPart instanceof ASTVariableDeclaration || initPart instanceof ASTVariableDeclarationStatement) {
-                addVariableToScope(initPart, getInitializer(initPart));
+                addVariableToScope(initPart, getInitializer(initPart, interpreterCallback));
             }
         }
     }

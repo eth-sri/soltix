@@ -62,8 +62,11 @@ public class ASTVariableDeclarationStatement extends ASTNode {
 
     @Override
     public String getName() { return declarations.get(0).getName(); }
+
     public ASTVariableDeclaration getDeclaration() {
         return (ASTVariableDeclaration)declarations.get(0); }
+
+    public ASTNode getInitializer() { return initializer; }
 
     @Override
     public String toSolidityCodePostfix() { return null; }

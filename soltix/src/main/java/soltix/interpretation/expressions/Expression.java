@@ -191,6 +191,7 @@ public class Expression {
     public ASTNode getCastExpressionType() { return castExpressionType; }
     public ArrayList<Expression> getFunctionCallArguments() { return functionCallArguments; }
     public ArrayList<Expression> getTupleComponents() { return tupleComponents; }
+    public ASTAssignment.Operator getAssignmentOperator() { return assignmentOperator; }
 
     public /*ArrayList<Value>*/ExpressionEvaluator.ComputedValues getComputedValues() { return computedValues; }
     public void setComputedValues(/*ArrayList<Value>*/ExpressionEvaluator.ComputedValues computedValues) { this.computedValues = computedValues; }
@@ -246,7 +247,7 @@ public class Expression {
         this.assignmentOperator = operator;
         this.secondOperand = secondOperand;
         type = firstOperand.getType();
-        debugPrefixCode = firstOperand.getDebugPrefixCode() + " " + secondOperand.getDebugPrefixCode() + " " + thirdOperand.getDebugPrefixCode();
+        debugPrefixCode = firstOperand.getDebugPrefixCode() + " " + secondOperand.getDebugPrefixCode();
         containsExpressionAlias = firstOperand.containsExpressionAlias || secondOperand.containsExpressionAlias;
     }
 
@@ -354,7 +355,6 @@ public class Expression {
         this.type = tupleType; // In this case, the type is an ASTTupleExpression, and type.getTypeList() retrieves
                                // the components' individual types
     }
-
 
     public ASTNode toASTNode() throws Exception {
         return toASTNode(null);

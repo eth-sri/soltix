@@ -101,7 +101,7 @@ public class ASTInterpreter {
         if (firstRun) {
             // Perform various variable reference resolutions. This cannot be done earlier (at least
             // not so easily) since forward references are allowed
-            scope = new Scope(contract);
+            scope = new Scope(contract, null);
             // Resolve contract inheritance specifiers to contract definitions. The modifier resolution
             // below already depends on the availability of base contract information
             resolveInheritanceSpecifiers(contract);

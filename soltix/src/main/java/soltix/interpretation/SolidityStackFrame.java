@@ -31,6 +31,7 @@ import java.util.ArrayList;
 public class SolidityStackFrame {
     private ASTContractDefinition contract;
     private ASTFunctionDefinition function;
+    private FullInterpreter interpreter;
     private ArrayList<Value> arguments;
     private Scope scope;
     private boolean haveReturnValue = false;
@@ -38,13 +39,14 @@ public class SolidityStackFrame {
 
     public SolidityStackFrame(ASTContractDefinition contract,
                               ASTFunctionDefinition function,
+                              FullInterpreter interpreter,
                               ArrayList<Value> arguments,
                               AST ast/*,
                               VariableEnvironment localVariableEnvironment*/) throws Exception {
         this.contract = contract;
         this.function = function;
         this.arguments = arguments;
-        scope = new Scope(contract);
+        scope = new Scope(contract, interpreter);
         VariableEnvironment localVariableEnvironment = new VariableEnvironment(ast, true);
         scope.setVariableEnvironment(localVariableEnvironment);
     }

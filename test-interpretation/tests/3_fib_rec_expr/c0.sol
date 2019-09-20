@@ -6,11 +6,9 @@ contract c0 {
   }
 
   function fib(uint x) private returns (uint) {
-     /*
-     if (x == 0) return 0;
-     else if (x == 1) return 1;
-     else return fib(x - 1) + fib(x - 2);
-     */
-    return (x == uint(0)? uint(0): (x == uint(1)? uint(1): fib(x - uint(1)) + fib(x - uint(2)))); // Note: the mere presence of the outer parens introduces an ASTTupleExpression
+    // Note:
+    //   - the mere presence of the outer parens introduces an ASTTupleExpression
+    //   - type inference isn't done yet, so we explicitly ensure that all types are unsigned to avoid type errors
+    return (x == uint(0)? uint(0): (x == uint(1)? uint(1): fib(x - uint(1)) + fib(x - uint(2))));
   }
 }

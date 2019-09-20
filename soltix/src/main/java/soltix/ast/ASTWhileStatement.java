@@ -26,6 +26,7 @@ public class ASTWhileStatement extends ASTNode implements IControlStructure {
     public ASTWhileStatement(long id) throws Exception { super(id); }
 
     public ASTNode getBody() { return body; }
+    public ASTNode getCondition() { return condition; }
 
     @Override
     public String toSolidityCode() throws Exception {

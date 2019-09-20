@@ -37,6 +37,7 @@ public class ASTAssignment extends ASTNode {
         }
     }
 
+    public Operator getOperator() { return operator; }
     public ASTNode getLHS() { return lhs; }
     public ASTNode getRHS() { return rhs; }
     public boolean getOutputIsBlock() { return outputIsBlock; }

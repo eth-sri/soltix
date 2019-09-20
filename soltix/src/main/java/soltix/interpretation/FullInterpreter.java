@@ -26,10 +26,12 @@ import soltix.interpretation.expressions.Expression;
 import soltix.interpretation.expressions.ExpressionBuilder;
 import soltix.interpretation.expressions.ExpressionEvaluationErrorHandler;
 import soltix.interpretation.expressions.ExpressionEvaluator;
+import soltix.interpretation.values.BoolValue;
 import soltix.interpretation.values.Value;
 import soltix.interpretation.variables.Variable;
 import soltix.interpretation.variables.VariableEnvironment;
 import soltix.interpretation.variables.VariableValues;
+import soltix.output.Console;
 import soltix.util.JSONValueConverter;
 import soltix.util.RandomNumbers;
 import org.json.simple.JSONObject;
@@ -198,12 +200,28 @@ public class FullInterpreter implements IInterpreterCallback {
         if (currentNode instanceof ASTFunctionDefinition) {
             ASTFunctionDefinition functionDefinition = (ASTFunctionDefinition) currentNode;
             returnValue = interpretFunctionCall(functionDefinition, functionDefinition.getInterpretationArguments());
+        } else if (currentNode instanceof ASTBlock) {
+            returnValue = interpretBlock((ASTBlock)currentNode);
+        } else if (currentNode instanceof ASTVariableDeclarationStatement) {
+            ; // This is already processed by currentScope.enterNode(). TODO move initializer processing here?
         } else if (currentNode instanceof ASTEmitStatement) {
             interpretEmitStatement((ASTEmitStatement) currentNode);
         } else if (currentNode instanceof ASTReturnStatement) {
-            interpretReturnStatement((ASTReturnStatement)currentNode);
+            interpretReturnStatement((ASTReturnStatement) currentNode);
+        } else if (currentNode instanceof  ASTIfStatement) {
+            interpretIfStatement((ASTIfStatement) currentNode);
+        } else if (currentNode instanceof ASTWhileStatement) {
+            interpretWhileStatement((ASTWhileStatement) currentNode);
+        } else if (currentNode instanceof ASTExpressionStatement) {
+            interpretExpressionStatement((ASTExpressionStatement) currentNode);
+        } else if (currentNode instanceof ASTLiteral
+                || currentNode instanceof ASTFunctionCall
+                || currentNode instanceof ASTBinaryOperation) {
+            returnValue = interpretExpression(currentNode);
         } else {
-            throw new Exception("FullInterpreter.interpretNode for unimplemented node type " + currentNode.getClass().toString());
+            throw new Exception("FullInterpreter.interpretNode for unimplemented node type "
+                    + currentNode.getClass().toString()
+                    + " for " + currentNode.toSolidityCode());
         }
 
         // TODO Restore position?
@@ -220,6 +238,7 @@ public class FullInterpreter implements IInterpreterCallback {
         // Set up stack frame
         SolidityStackFrame stackFrame = new SolidityStackFrame(functionDefinition.getContract(),
                 functionDefinition,
+                this,
                 arguments,
                 ast);
 
@@ -230,16 +249,22 @@ public class FullInterpreter implements IInterpreterCallback {
         ast.setCurrentNode(functionDefinition);
 
         // Perform interpretation
+        /*
         ASTBlock body = functionDefinition.getBody();
         body.setCovered(true);
-
         Value result = interpretChildNodes(body);
+        */
+        Value result = interpretNode(functionDefinition.getBody());
 
         // Cleanup
         uninitializeLocalFunctionEnvironment(stackFrame, functionDefinition);
         callStack.pop();
 
         return result;
+    }
+
+    protected Value interpretBlock(ASTBlock block) throws Exception {
+        return interpretChildNodes(block);
     }
 
     // Depth-first child node traversal for all paths
@@ -250,7 +275,7 @@ public class FullInterpreter implements IInterpreterCallback {
             if (currentStackFrame().getHaveReturnValue()) {
                 // Have return value (null if "empty"/"void")- stop
                 result = currentStackFrame().getReturnValue();
-                break;
+                break; // TODO what about break/continue?
             }
         }
         return result;
@@ -281,6 +306,22 @@ public class FullInterpreter implements IInterpreterCallback {
         eventObject.put("args", argsObject);
     }
 
+    protected Value interpretExpressionStatement(ASTExpressionStatement statement) throws Exception {
+        return interpretExpression(statement.getBody());
+    }
+
+    protected Value interpretExpression(ASTNode node) throws Exception {
+        VariableEnvironment currentVariableEnvironment = currentStackFrame().getScope().getVariableEnvironment();
+        Expression expression = ExpressionBuilder.fromASTNode(currentStackFrame().getContract(),
+                                                              currentVariableEnvironment,
+                                                              node);
+        Value result = expressionEvaluator.evaluateForAll(currentVariableEnvironment,
+                ExpressionBuilder.fromASTNode(currentStackFrame().getContract(),
+                        currentVariableEnvironment,
+                        node)).values.get(0);
+        return result;
+    }
+
     protected void interpretReturnStatement(ASTReturnStatement returnStatement) throws Exception {
         // Evaluate argument
         VariableEnvironment currentVariableEnvironment = currentStackFrame().getScope().getVariableEnvironment();
@@ -289,5 +330,43 @@ public class FullInterpreter implements IInterpreterCallback {
                                                           currentVariableEnvironment,
                                                           returnStatement.getArgument())).values.get(0);
         currentStackFrame().setReturnValue(result);
+    }
+
+    protected void interpretIfStatement(ASTIfStatement ifStatement) throws Exception {
+        // Interpret condition
+        VariableEnvironment currentVariableEnvironment = currentStackFrame().getScope().getVariableEnvironment();
+        Value result = interpretNode(ifStatement.getCondition());/*expressionEvaluator.evaluateForAll(currentVariableEnvironment,
+                ExpressionBuilder.fromASTNode(currentStackFrame().getContract(),
+                        currentVariableEnvironment,
+                        ifStatement.getCondition())).values.get(0);*/
+
+
+
+        // Interpret body
+        if (((BoolValue) result).getValue() == true) {
+            interpretNode(ifStatement.getIfBranch());
+        } else {
+            interpretNode(ifStatement.getElseBranch());
+        }
+    }
+
+    protected void interpretWhileStatement(ASTWhileStatement whileStatement) throws Exception {
+        for (;;) {
+            // Interpret condition
+            Value result = interpretNode(whileStatement.getCondition());
+
+            if (!(result instanceof BoolValue)) {
+                Console.error(whileStatement, "Unexpected while condition type - not bool for "
+                        + whileStatement.getCondition().toSolidityCode());
+                throw new Exception("interpretIfStatement failed");
+            }
+
+            // Interpret body
+            if (((BoolValue) result).getValue() == true) {
+                interpretNode(whileStatement.getBody());
+            } else {
+                break;
+            }
+        }
     }
 }

@@ -107,7 +107,7 @@ public class ExpressionBuilder {
             );
             result = conditionalExpression;
         } else if (astNode instanceof ASTTupleExpression) {
-            ASTTupleExpression tupleExpression = (ASTTupleExpression)astNode;
+            ASTTupleExpression tupleExpression = (ASTTupleExpression) astNode;
             ArrayList<Expression> tupleComponents = new ArrayList<Expression>();
 
             if (tupleExpression.getCount() == 1) {
@@ -123,11 +123,63 @@ public class ExpressionBuilder {
                 }
                 result = new Expression(tupleComponents, tupleExpression);
             }
+        } else if (astNode instanceof ASTAssignment) {
+            ASTAssignment assignmentExpression = (ASTAssignment) astNode;
+            Expression lhsExpression = fromASTNode(contractDefinition, environment, assignmentExpression.getLHS());
+            Expression rhsExpression = fromASTNode(contractDefinition, environment, assignmentExpression.getRHS());
+            ;
 
-        /*else if (astNode instanceof ASTUnaryOperation) {
+            // For now, we convert every compound assignment  x op y  to its non-compound form   x = x op y
+            if (assignmentExpression.getOperator() != ASTAssignment.Operator.OP_ASSIGN) {
+                ASTBinaryOperation.Operator binaryOperator = null;
+                switch (assignmentExpression.getOperator()) {
+                    case OP_ASSIGN_COMP_BAND:
+                        binaryOperator = ASTBinaryOperation.Operator.OP_BAND;
+                        break;
+                    case OP_ASSIGN_COMP_BOR:
+                        binaryOperator = ASTBinaryOperation.Operator.OP_BOR;
+                        break;
+                    case OP_ASSIGN_COMP_BXOR:
+                        binaryOperator = ASTBinaryOperation.Operator.OP_BXOR;
+                        break;
+                    case OP_ASSIGN_COMP_DIV:
+                        binaryOperator = ASTBinaryOperation.Operator.OP_DIV;
+                        break;
+                    case OP_ASSIGN_COMP_MINUS:
+                        binaryOperator = ASTBinaryOperation.Operator.OP_MINUS;
+                        break;
+                    case OP_ASSIGN_COMP_MOD:
+                        binaryOperator = ASTBinaryOperation.Operator.OP_MOD;
+                        break;
+                    case OP_ASSIGN_COMP_MUL:
+                        binaryOperator = ASTBinaryOperation.Operator.OP_MUL;
+                        break;
+                    case OP_ASSIGN_COMP_PLUS:
+                        binaryOperator = ASTBinaryOperation.Operator.OP_PLUS;
+                        break;
+                    case OP_ASSIGN_COMP_SHL:
+                        binaryOperator = ASTBinaryOperation.Operator.OP_BSHL;
+                        break;
+                    case OP_ASSIGN_COMP_SHR:
+                        binaryOperator = ASTBinaryOperation.Operator.OP_BSHR;
+                        break;
+                    default:
+                        throw new Exception("ExpressionBuilder.fromASTNode: unsupported compound assignment operator "
+                                + assignmentExpression.getOperator());
+                }
+                // Transform right side
+                rhsExpression = new Expression(
+                        lhsExpression,
+                        binaryOperator,
+                        rhsExpression
+                );
+
+            }
+            result = new Expression(lhsExpression, ASTAssignment.Operator.OP_ASSIGN, rhsExpression);
+        } else if (astNode instanceof ASTUnaryOperation) {
             ASTUnaryOperation unaryOperation = (ASTUnaryOperation)astNode;
-            unaryOperation.get
-        }*/
+            result = new Expression(unaryOperation.getOperator(),
+                    fromASTNode(contractDefinition, environment, unaryOperation.getOperand()));
         } else {
             throw new Exception("ExpressionBuilder.fromASTNode for unimplemented node type " + astNode.getClass().getName());
         }

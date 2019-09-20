@@ -466,13 +466,40 @@ public class ExpressionEvaluator {
             resultValues.sourceExpression = expression;
 
             for (int i = 0; i < computedTupleValues.get(0).values.size(); ++i) {
-                ArrayList<Value> tupleValues=  new ArrayList<Value>();
+                ArrayList<Value> tupleValues = new ArrayList<Value>();
                 for (int j = 0; j < computedTupleValues.size(); ++j) {
                     Value value = computedTupleValues.get(j).values.get(i);
                     tupleValues.add(value);
                 }
                 resultValues.values.add(new TupleValue(tupleValues, expression.getType()));
             }
+        } else if (expression.getAssignmentOperator() != null) {
+            if (expression.getAssignmentOperator() != ASTAssignment.Operator.OP_ASSIGN) {
+                Util.unimpl();
+            }
+
+            // Evaluate LHS operand
+            /*ComputedValues firstOperandValues;
+            firstOperandValues = evaluate(environment, valueSetIndex, expression.getFirstOperand(), reevaluating);*/
+
+            // Adapt RHS operand to include a conversion operation to the LHS operand's type
+            Expression convertedRHS = new Expression(expression.getSecondOperand(), expression.getFirstOperand().getType());
+
+            // Evaluate RHS operand
+            ComputedValues secondOperandValues;
+            secondOperandValues = evaluate(environment, valueSetIndex, convertedRHS, reevaluating);
+
+            // Store assignment
+            if (!(expression.getFirstOperand().getValue() instanceof Variable)) { // TODO proper lookup for structs, arrays
+                Util.unimpl();
+            }
+            Variable variable = (Variable)expression.getFirstOperand().getValue();
+
+            for (int i = 0; i < secondOperandValues.values.size(); ++i) {
+                Value value = secondOperandValues.values.get(i);
+                environment.updateVariableValue(variable, value);
+            }
+            resultValues = secondOperandValues;
         } else {
             throw new Exception("ExpressionEvaluator.evaluate received malformed Expression");
         }
