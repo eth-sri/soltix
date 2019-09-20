@@ -19,6 +19,10 @@
  */
 package soltix.ast;
 
+import soltix.interpretation.expressions.ExpressionBuilder;
+import soltix.interpretation.variables.VariableEnvironment;
+import soltix.util.Util;
+
 import java.util.ArrayList;
 
 public class ASTTupleExpression extends ASTNode {
@@ -111,6 +115,33 @@ public class ASTTupleExpression extends ASTNode {
     @Override
     public String toSolidityCodePostfix() { return null; }
 
+    public int getCount() {
+        return count;
+    }
+
+    public ASTNode getComponent(int index) {
+        if (tupleItems.size() != tupleComponents.size()) {
+            // TODO handle holes. We're probably better off including them in tupleItems as well
+            Util.unimpl();
+        }
+        return tupleItems.get(index);
+    }
+
+    public ArrayList<ASTNode> getTypeList(ASTContractDefinition contractDefinition,
+                                          VariableEnvironment environment) throws Exception {
+        // TODO Fix this not to compute things here but use the type field and properly handle holes.
+        // We should probably model tuple types more appropriately as well
+        if (tupleItems.size() != tupleComponents.size()) {
+            // TODO handle holes. We're probably better off including them in tupleItems as well
+            Util.unimpl();
+        }
+        ArrayList<ASTNode> result = new ArrayList<ASTNode>();
+        for (ASTNode component : tupleItems) {
+            result.add(ExpressionBuilder.fromASTNode(contractDefinition, environment, component).getType());
+        }
+        return result;
+    }
+
     @Override
     public void finalize() throws Exception {
         tupleItems = getChildren();
@@ -149,7 +180,7 @@ public class ASTTupleExpression extends ASTNode {
         //
         // This is pretty much guaranteed to break for pathological cases
         if (tupleComponents != null) {
-            ;
+            count = tupleComponents.size(); // TODO is this correct?
         } else if (tupleTypeField != null && tupleTypeField.startsWith("tuple(")) {
                 // As per above: Supplied items are at the beginning, but their count must be determined
                 // from the type field
@@ -168,6 +199,7 @@ public class ASTTupleExpression extends ASTNode {
             for (int i = 0; i < tupleItems.size(); ++i) {
                 tupleComponents.add(true);
             }
+            count = tupleComponents.size(); // TODO is this correct?
         }
     }
 }

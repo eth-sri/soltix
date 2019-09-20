@@ -33,6 +33,10 @@ public class ASTBinaryOperation extends ASTNode {
         }
     }
 
+    public Operator getOperator() { return operator; }
+    public ASTNode getLeftOperand() { return leftOperand; }
+    public ASTNode getRightOperand() { return rightOperand; }
+
     public enum Operator {
         // Arithmetic
         OP_PLUS("+", false),

@@ -22,6 +22,7 @@ package soltix.ast;
 import soltix.Configuration;
 import soltix.interpretation.expressions.Expression;
 import soltix.interpretation.expressions.ExpressionBuilder;
+import soltix.interpretation.values.Value;
 import soltix.interpretation.variables.VariableEnvironment;
 
 import java.util.ArrayList;
@@ -157,4 +158,13 @@ public class ASTFunctionCall extends ASTNode {
             }*/
         }
     }
+
+    // Interpretation-related extra data: Argument values
+    public ASTFunctionDefinition getInterpretationFunctionDefinition() {
+        return interpretationFunctionDefinition;
+    }
+    public void setInterpretationFunctionDefinition(ASTFunctionDefinition interpretationFunctionDefinition) {
+        this.interpretationFunctionDefinition = interpretationFunctionDefinition;
+    }
+    private ASTFunctionDefinition interpretationFunctionDefinition;
 }

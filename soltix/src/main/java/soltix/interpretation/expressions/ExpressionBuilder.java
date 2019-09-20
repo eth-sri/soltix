@@ -48,20 +48,24 @@ public class ExpressionBuilder {
             Variable variable = environment.getVariable(identifier.getName());
 
             if (variable == null) {
-                Console.error(astNode, "Reference to unknown variable '" + identifier.getName() + "'");
+                Console.error(astNode, "Reference to unknown variable '"
+                        + identifier.getName() + "' on scope " + environment.toString());
                 throw new Exception("fromASTNode failed"); // TODO proper console errors vs. exceptions
             }
             result = new Expression(variable);
         } else if (astNode instanceof ASTFunctionCall) {
-            ASTFunctionCall functionCall = (ASTFunctionCall)astNode;
-            if (functionCall.getCalled() instanceof ASTElementaryTypeName) {
+            ASTFunctionCall functionCall = (ASTFunctionCall) astNode;
+
+            if (functionCall.getCalled() instanceof ASTElementaryTypeNameExpression) {
+                ASTElementaryTypeNameExpression elementaryTypeNameExpression = (ASTElementaryTypeNameExpression)functionCall.getCalled();
+
                 // A conversion operation - int8(...)
                 ArrayList<ASTNode> arguments = functionCall.getArguments();
                 if (arguments.size() != 1) {
                     throw new Exception("Unexpected elementary type name conversion argument count (not 1): " + arguments.size());
                 }
                 Expression toConvert = fromASTNode(contractDefinition, environment, arguments.get(0));
-                result = new Expression(toConvert, functionCall.getCalled()); // type conversion expression
+                result = new Expression(toConvert, elementaryTypeNameExpression.getElementaryTypeName()); // type conversion expression
             } else {
                 // TODO
                 //   - create ordinary function call expression
@@ -81,14 +85,50 @@ public class ExpressionBuilder {
                 ASTNode returnType = functionDefinition.getReturnType();
 
                 // Build Expression objects for all function arguments
+                functionCall.setInterpretationFunctionDefinition(functionDefinition);
                 Expression callExpression = new Expression(functionCall, arguments, returnType);
                 result = callExpression;
             }
-        }
+        } else if (astNode instanceof  ASTBinaryOperation) {
+            ASTBinaryOperation binaryOperation = (ASTBinaryOperation)astNode;
+            Expression binaryExpression = new Expression(
+                fromASTNode(contractDefinition, environment, binaryOperation.getLeftOperand()),
+                binaryOperation.getOperator(),
+                fromASTNode(contractDefinition, environment, binaryOperation.getRightOperand())
+            );
+            result = binaryExpression;
+        } else if (astNode instanceof ASTConditional) {
+            ASTConditional conditional = (ASTConditional) astNode;
+
+            Expression conditionalExpression = new Expression(
+                    fromASTNode(contractDefinition, environment, conditional.getCondition()),
+                    fromASTNode(contractDefinition, environment, conditional.getTrueBranch()),
+                    fromASTNode(contractDefinition, environment, conditional.getFalseBranch())
+            );
+            result = conditionalExpression;
+        } else if (astNode instanceof ASTTupleExpression) {
+            ASTTupleExpression tupleExpression = (ASTTupleExpression)astNode;
+            ArrayList<Expression> tupleComponents = new ArrayList<Expression>();
+
+            if (tupleExpression.getCount() == 1) {
+                // The type of a single-item tuple troublingly decays to the type of its only component, e.g. in
+                //     0     ==   (true? 0: 1)
+                //     ^ int      ^^^^^^^^^^^^ tuple expression giving int
+                // So we avoid modeling the tuple entirely and substitute it with the only element.
+                result = fromASTNode(contractDefinition, environment, tupleExpression.getComponent(0));
+            } else {
+                for (int i = 0; i < tupleExpression.getCount(); ++i) {
+                    ASTNode component = tupleExpression.getComponent(i);
+                    tupleComponents.add(fromASTNode(contractDefinition, environment, component));
+                }
+                result = new Expression(tupleComponents, tupleExpression);
+            }
+
         /*else if (astNode instanceof ASTUnaryOperation) {
             ASTUnaryOperation unaryOperation = (ASTUnaryOperation)astNode;
             unaryOperation.get
-        }*/ else {
+        }*/
+        } else {
             throw new Exception("ExpressionBuilder.fromASTNode for unimplemented node type " + astNode.getClass().getName());
         }
 

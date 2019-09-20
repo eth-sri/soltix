@@ -31,6 +31,7 @@ import soltix.interpretation.variables.VariableEnvironment;
 import soltix.util.Hash;
 import soltix.util.Util;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 
 import static soltix.ast.ASTBinaryOperation.Operator.*;
@@ -182,7 +183,8 @@ public class ExpressionEvaluator {
                 ASTElementaryTypeName secondType = (ASTElementaryTypeName)expression.getSecondOperand().getType();
                 if (firstType.isSigned() != secondType.isSigned()) {
                     throw new ExpressionEvaluationException(null, ExceptionType_TypeError_SignednessMismatch,
-                            "Invalid combination of signed and unsigned integer operands", null);
+                            "Invalid combination of signed and unsigned integer operands in "
+                                    + expression.toASTNode().toSolidityCode(), null);
                 } else if (firstType.isSigned() && expression.getBinaryOperator() == OP_EXP) {
                     throw new ExpressionEvaluationException(null, ExceptionType_TypeError_WrongSign,
                             "Invalid signed operands to **", null);
@@ -353,11 +355,22 @@ public class ExpressionEvaluator {
                         resultValues.values.add(evaluateKeccak256ForOne((StringValue) argumentValues.values.get(0)));
                     }
                 } else if (interpreter != null) {
-                    // This call can be interpreted
-                    //interpreter.interpretFunctionCall
+                    // This call can be interpreted - first evaluate function arguments
+                    // TODO valueSetIndex distinction ever relevant here?
+                    ArrayList<Value> arguments = evaluateFunctionCallArguments(environment,
+                                                                                VariableEnvironment.NO_VALUE_SET_SELECTED,
+                                                                                expression.getFunctionCallArguments());
+                    ASTFunctionDefinition calledFunction = functionCall.getInterpretationFunctionDefinition();
 
-                    Util.unimpl();
-                    throw new Exception("unimpl");
+                    calledFunction.setInterpretationArguments(arguments);
+
+                    Value returnValue = interpreter.interpretNode(calledFunction);
+                    resultValues = new ComputedValues();
+                    resultValues.values.add(returnValue);
+
+                    if (returnValue == null) {
+                        throw new Exception("Null return value from interpretation");
+                    }
                 } else {
                     throw new Exception("Attempt to evaluate unimplemented function " + identifier.getName());
                 }
@@ -385,12 +398,12 @@ public class ExpressionEvaluator {
                 if (valueSetIndex == VariableEnvironment.NO_VALUE_SET_SELECTED) {
                     if (environment.isRecordingChanges()) {
                         // Store a single value
-                        Value v = environment.resolveVariableValue(0, ((Variable)expression.getValue()).getName());
+                        Value v = environment.resolveVariableValue(0, ((Variable) expression.getValue()).getName());
                         result.values.add(v);
                     } else {
                         // Resolve all variable values based on recorded profiling results
                         for (int i = 0; i < environment.getValueCount(); ++i) {
-                            Value v = environment.resolveVariableValue(i, ((Variable)expression.getValue()).getName());
+                            Value v = environment.resolveVariableValue(i, ((Variable) expression.getValue()).getName());
                             //System.out.println("Resolved var " + ((Variable)expression.getValue()).getName());
                             //System.out.println("to " + v.toASTNode(false).toSolidityCode());
                             result.values.add(v);
@@ -399,7 +412,7 @@ public class ExpressionEvaluator {
                 } else {
                     // Resolve current variable value based on recorded profiling results
                     Value v;
-                    v = environment.resolveVariableValue(valueSetIndex, ((Variable)expression.getValue()).getName());
+                    v = environment.resolveVariableValue(valueSetIndex, ((Variable) expression.getValue()).getName());
                     //System.out.println("Resolved var " + ((Variable)expression.getValue()).getName());
                     //System.out.println("to " + v.toASTNode(false).toSolidityCode());
                     result.values.add(v);
@@ -427,6 +440,38 @@ public class ExpressionEvaluator {
                     result.values.add(value);
                 }
                 resultValues = result;
+            }
+        } else if (expression.getTupleComponents() != null) {
+            // Tuple expression - evaluate all components
+            ArrayList<Expression> components = expression.getTupleComponents();
+            ArrayList<ComputedValues> computedTupleValues = new ArrayList<ComputedValues>();
+
+            for (Expression component : components) {
+                ComputedValues operandValues;
+                operandValues = evaluate(environment, valueSetIndex, component, reevaluating); // TODO reevaluating dubious here
+                computedTupleValues.add(operandValues);
+            }
+            // Combine sub items:
+            // (a,b,c)                                       tuple-expression      Expression,Expression,Expression
+            // --->
+            // a: [a1,a2,...] b: [b1,b2,...] c: [c1,c2,...]  multi-value resuls    Value,Value,Value.... per Expression
+            // --->
+            // [   (a1,b1,c1), (a2, b2, c2), ...  ]          tuple multi-values    (Value,Value,Value...) per tuple-expr
+            if (computedTupleValues.size() == 0 || computedTupleValues.get(0).values.size() == 0) {
+                System.out.println("No evaluation results for " + expression.toASTNode().toSolidityCode());
+                Util.unimpl();
+            }
+
+            resultValues = new ComputedValues();
+            resultValues.sourceExpression = expression;
+
+            for (int i = 0; i < computedTupleValues.get(0).values.size(); ++i) {
+                ArrayList<Value> tupleValues=  new ArrayList<Value>();
+                for (int j = 0; j < computedTupleValues.size(); ++j) {
+                    Value value = computedTupleValues.get(j).values.get(i);
+                    tupleValues.add(value);
+                }
+                resultValues.values.add(new TupleValue(tupleValues, expression.getType()));
             }
         } else {
             throw new Exception("ExpressionEvaluator.evaluate received malformed Expression");
@@ -462,6 +507,20 @@ public class ExpressionEvaluator {
         return resultValues;
     }
 
+    protected ArrayList<Value> evaluateFunctionCallArguments(VariableEnvironment environment,
+                                                             int valueSetIndex,
+                                                             ArrayList<Expression> argumentExpressions
+                                                             /*boolean reevaluating ??? ... won't work so easily with a list*/) throws Exception {
+        ArrayList<Value> values = new ArrayList<Value>();
+        for (Expression expression : argumentExpressions) {
+            ComputedValues computedValues = evaluate(environment,
+                valueSetIndex,
+                expression,
+                false /* TODO proper fixup integration */);
+            values.add(computedValues.values.get(0));
+        }
+        return values;
+    }
 
     protected Value evaluateKeccak256ForOne(StringValue input) throws Exception {
         byte[] hash = Hash.keccak256(input.getValue().getBytes("UTF-8"));

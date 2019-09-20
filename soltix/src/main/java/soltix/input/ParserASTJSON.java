@@ -375,10 +375,11 @@ public class ParserASTJSON extends Parser {
 
     protected void processElementaryTypeNameExpression(long id, AST ast, JSONObject attributes) throws Exception {
         String value = (String)attributes.get("value");
+        String type = (String)attributes.get("type");
         if (value == null) {
             throw new Exception("Elementary type name expression without value attribute");
         }
-        ast.addInnerNode(new ASTElementaryTypeNameExpression(id, value));
+        ast.addInnerNode(new ASTElementaryTypeNameExpression(id, value, type));
     }
 
     protected void processMapping(long id, AST ast) throws Exception {

@@ -33,6 +33,7 @@ public class SolidityStackFrame {
     private ASTFunctionDefinition function;
     private ArrayList<Value> arguments;
     private Scope scope;
+    private boolean haveReturnValue = false;
     private Value returnValue;
 
     public SolidityStackFrame(ASTContractDefinition contract,
@@ -52,6 +53,10 @@ public class SolidityStackFrame {
 
     public Scope getScope() { return scope; }
 
-    public void setReturnValue(Value value) { returnValue = value; }
+    public void setReturnValue(Value value) {
+        haveReturnValue = true;
+        returnValue = value;
+    }
+    public boolean getHaveReturnValue() { return haveReturnValue; }
     public Value getReturnValue() { return returnValue; }
 }

@@ -20,6 +20,7 @@
 package soltix.ast;
 
 import soltix.Configuration;
+import soltix.interpretation.values.Value;
 import soltix.synthesis.FunctionGenerator;
 import soltix.util.Util;
 
@@ -227,4 +228,14 @@ public class ASTFunctionDefinition extends FunctionScope {
             body = (ASTBlock)getChild(0);
         }
     }
+
+
+    // Interpretation-related extra data: Argument values
+    public ArrayList<Value> getInterpretationArguments() {
+        return interpretationArguments;
+    }
+    public void setInterpretationArguments(ArrayList<Value> interpretationArguments) {
+        this.interpretationArguments = interpretationArguments;
+    }
+    private ArrayList<Value> interpretationArguments;
 }

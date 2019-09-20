@@ -33,6 +33,11 @@ public class ASTConditional extends ASTNode {
     @Override
     public String toSolidityCodePostfix() { return null; }
 
+
+    public ASTNode getCondition() { return condition; }
+    public ASTNode getTrueBranch() { return lhs; }
+    public ASTNode getFalseBranch() { return rhs; }
+
     @Override
     public void finalize() throws Exception {
         if (getChildCount() != 3) {

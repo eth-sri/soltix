@@ -20,12 +20,29 @@
 package soltix.ast;
 
 public class ASTElementaryTypeNameExpression extends ASTNode {
-    public ASTElementaryTypeNameExpression(long id, String name) throws Exception {
+    private ASTNode elementaryTypeName;
+    private String typeString;
+
+    public ASTElementaryTypeNameExpression(long id, String name, String typeString) throws Exception {
         super(id, name);
+        this.typeString = typeString;
     }
 
     @Override
     public String toSolidityCode() { return name; }
     @Override
     public String toSolidityCodePostfix() { return null; }
+
+    public ASTNode getElementaryTypeName() { return elementaryTypeName; }
+
+    @Override
+    public void finalize() throws Exception {
+        String typePrefix = "type(";
+        if (!typeString.startsWith(typePrefix) || !typeString.endsWith(")")) {
+            throw new Exception("Invalid ASTElementaryTypeNameExpression type string " + typeString);
+        }
+
+        String typeName = typeString.substring(typePrefix.length(), typeString.length() - 1);
+        elementaryTypeName = new ASTElementaryTypeName(0, typeName);
+    }
 }

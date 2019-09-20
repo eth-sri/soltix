@@ -170,7 +170,7 @@ public class IntegerValue extends Value implements Comparable, IIntegerOperation
 
     @Override
     public Object toJSONRepresentation() {
-        return bigValue.toString();
+        return bigValue.toString(16); // like truffle, output hex number without 0x prefix
     }
 
     @Override

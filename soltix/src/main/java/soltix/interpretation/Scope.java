@@ -142,12 +142,14 @@ public class Scope {
             currentFunction = (FunctionScope)node;
 
             ASTParameterList parameters = currentFunction.getParameterList();
+            ArrayList<Value> arguments = node instanceof ASTFunctionDefinition?
+                    ((ASTFunctionDefinition)node).getInterpretationArguments() : null;
 
             // Add parameters to scope
             for (int i = 0; i < parameters.getChildCount(); ++i) {
                 ASTNode child = parameters.getChild(i);
                 if (!child.getName().equals("")) { // No point in tracking unnamed arguments
-                    addVariableToScope(child, getInitializer(child)); // TODO convert type if needed
+                    addVariableToScope(child, arguments != null? arguments.get(i): null /*getInitializer(child)*/); // TODO convert type if needed
                 }
             }
         } else if (node instanceof ASTForStatement) {

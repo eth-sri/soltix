@@ -25,6 +25,7 @@ import soltix.interpretation.Type;
 import soltix.interpretation.values.Value;
 import soltix.interpretation.variables.Variable;
 import soltix.synthesis.ExpressionGenerator;
+import soltix.util.Util;
 
 import java.util.ArrayList;
 import java.util.function.UnaryOperator;
@@ -50,7 +51,8 @@ public class Expression {
 
     private String debugPrefixCode = "";
 
-    // Operators - non-null if used and mutually exclusive
+    // Operators - non-null if used, and for the most part mutually exclusive.
+    // Separate constructors are used to build distinct expression types for these operators.
     private ASTBinaryOperation.Operator binaryOperator = null; // Binary computation
     private ASTAssignment.Operator assignmentOperator = null; // Binary assignment
     private ASTUnaryOperation.Operator unaryOperator = null; // Unary computation
@@ -60,6 +62,7 @@ public class Expression {
     private ASTFunctionCall functionCall = null; // Function call
     private ASTNode castExpressionType = null; // Cast-to type
     private ArrayList<Expression> functionCallArguments = null; // ... function call arguments
+    private ArrayList<Expression> tupleComponents = null; // Tuple expression components
 
     // Operator operands - non-null if used
     private Expression firstOperand = null;
@@ -187,6 +190,7 @@ public class Expression {
     public ASTFunctionCall getFunctionCall() { return functionCall; }
     public ASTNode getCastExpressionType() { return castExpressionType; }
     public ArrayList<Expression> getFunctionCallArguments() { return functionCallArguments; }
+    public ArrayList<Expression> getTupleComponents() { return tupleComponents; }
 
     public /*ArrayList<Value>*/ExpressionEvaluator.ComputedValues getComputedValues() { return computedValues; }
     public void setComputedValues(/*ArrayList<Value>*/ExpressionEvaluator.ComputedValues computedValues) { this.computedValues = computedValues; }
@@ -336,6 +340,21 @@ public class Expression {
         this.type = value.getType();
     }
 
+    // Tuple expression - an expression containing an ordered list of sub-expressions
+    public Expression(ArrayList<Expression> tupleComponents, ASTNode tupleType) {
+        if (tupleComponents.size() == 0) {
+            Util.unimpl();
+        /*} else if (tupleComponents.size() == 1) {
+            // A single-item tuple decays to the type of its item, so we strip away the tuple info too.
+            //     0       == (true? 1: 0)
+            //     ^^ int     ^^^^^^^^^^^^ tuple expression, but is typed as int
+            this = tupleComponents.get(0);*/
+        }
+        this.tupleComponents = tupleComponents;
+        this.type = tupleType; // In this case, the type is an ASTTupleExpression, and type.getTypeList() retrieves
+                               // the components' individual types
+    }
+
 
     public ASTNode toASTNode() throws Exception {
         return toASTNode(null);
@@ -454,6 +473,21 @@ public class Expression {
             result = new ASTVerbatimText(0, functionCall.toSolidityCode());
         } else if (castExpressionType != null) {
             result = new ASTVerbatimText(0, castExpressionType.toSolidityCode() + "(" + firstOperand.toASTNode(undoExpressions).toSolidityCode() + ")");
+        } else if (tupleComponents != null) {
+            String resultString = null;
+            for (Expression tupleComponent: tupleComponents) {
+                if (resultString != null) {
+                    resultString += ", ";
+                } else {
+                    resultString = "(";
+                }
+                resultString += tupleComponent.toASTNode(undoExpressions).toSolidityCode();
+            }
+            if (tupleComponents.size() == 0) {
+                resultString = "(";
+            }
+            resultString += ")";
+            result = new ASTVerbatimText(0, resultString);
         } else {
             result = value.toASTNode(false);
         }

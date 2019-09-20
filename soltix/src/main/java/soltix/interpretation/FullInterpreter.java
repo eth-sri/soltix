@@ -26,19 +26,16 @@ import soltix.interpretation.expressions.Expression;
 import soltix.interpretation.expressions.ExpressionBuilder;
 import soltix.interpretation.expressions.ExpressionEvaluationErrorHandler;
 import soltix.interpretation.expressions.ExpressionEvaluator;
-import soltix.interpretation.values.IntegerValue;
 import soltix.interpretation.values.Value;
 import soltix.interpretation.variables.Variable;
 import soltix.interpretation.variables.VariableEnvironment;
 import soltix.interpretation.variables.VariableValues;
 import soltix.util.JSONValueConverter;
 import soltix.util.RandomNumbers;
-import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import soltix.util.Util;
 
 import java.io.FileWriter;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.Stack;
 
@@ -105,28 +102,22 @@ public class FullInterpreter implements IInterpreterCallback {
 
 
     private Stack<SolidityStackFrame> callStack = new Stack<SolidityStackFrame>();
-    protected SolidityStackFrame currentStackFrame() { return callStack.peek(); }
+    protected SolidityStackFrame currentStackFrame() { return callStack.empty()? null: callStack.peek(); }
 
     public Value interpretTransaction(Transaction transaction) throws Exception {
-        // Set up initial stack frame
-        SolidityStackFrame stackFrame = new SolidityStackFrame(transaction.getContract(),
-                                                                transaction.getFunction(),
-                                                                transaction.getArguments(),
-                                                                ast
-                                                                /*localVariableEnvironment*/);
 
-        initializeLocalFunctionEnvironment(stackFrame, transaction.getFunction(), transaction.getArguments()); // transaction);
+       // Value result = interpretNode();
 
-        callStack.push(stackFrame);
+        ASTFunctionDefinition calledFunction = transaction.getFunction();
+        calledFunction.setInterpretationArguments(transaction.getArguments());
+        //Value result = interpretFunctionCall(transaction.getFunction(), transaction.getArguments());
+        Value result = interpretNode(transaction.getFunction());
 
-        ASTNode startNode = transaction.getFunction();
-        ast.setCurrentNode(startNode);
-
-        Value result = doInterpret();
-
+                /*
         uninitializeLocalFunctionEnvironment(stackFrame, transaction.getFunction()); //transaction);
-
         callStack.pop();
+        */
+
         return result;
     }
 
@@ -186,52 +177,79 @@ public class FullInterpreter implements IInterpreterCallback {
     }
 
 
-    protected Value doInterpret() throws Exception {
-        ASTNode currentNode = ast.getCurrentNode();
-        Scope currentScope = currentStackFrame().getScope();
+    public Value interpretNode(ASTNode currentNode) throws Exception {
+        //ASTNode currentNode = ast.getCurrentNode();
+        ast.setCurrentNode(currentNode);
+        Scope currentScope = currentStackFrame() != null? currentStackFrame().getScope(): null;
 
         currentNode.setCovered(true);
-        currentScope.enterNode(currentNode, null); // TODO initializer?
+        //if (currentScope != null) { // may be null for the first function call initiating the transaction
+
+        // Process the current item for the scope to e.g. introduce a declaration if it is a variable.
+        // If this is a function, the step will be performed as part of the function interpretation because
+        // it first needs to set up a stack frame with a new scope.
+        // The first interpreted node must be a function definition to ensure that a stack + scope exists.
+        if (!(currentNode instanceof ASTFunctionDefinition)) {
+            currentScope.enterNode(currentNode, null); // TODO initializer?
+        }
 
         Value returnValue = null;
 
         if (currentNode instanceof ASTFunctionDefinition) {
-            returnValue = interpretFunctionCall((ASTFunctionDefinition) currentNode);
+            ASTFunctionDefinition functionDefinition = (ASTFunctionDefinition) currentNode;
+            returnValue = interpretFunctionCall(functionDefinition, functionDefinition.getInterpretationArguments());
         } else if (currentNode instanceof ASTEmitStatement) {
             interpretEmitStatement((ASTEmitStatement) currentNode);
         } else if (currentNode instanceof ASTReturnStatement) {
             interpretReturnStatement((ASTReturnStatement)currentNode);
         } else {
-            throw new Exception("FullInterpreter.doInterpret for unimplemented node type " + currentNode.getClass().toString());
+            throw new Exception("FullInterpreter.interpretNode for unimplemented node type " + currentNode.getClass().toString());
         }
 
-        /*
-        // Depth-first child node traversal for all paths
-        for (int i = 0; i < currentNode.getChildCount(); ++i) {
-            ast.setCurrentNode(currentNode.getChild(i));
-            interpret(ast);
-        }
-*/
-        // Restore position
+        // TODO Restore position?
         //ast.setCurrentNode(currentNode);
         //currentScope.leaveNode(currentNode);
         return returnValue;
     }
 
-    protected Value interpretFunctionCall(ASTFunctionDefinition functionDefinition) throws Exception {
+
+    protected Value interpretFunctionCall(ASTFunctionDefinition functionDefinition,
+                                          ArrayList<Value> arguments) throws Exception {
+
+
+        // Set up stack frame
+        SolidityStackFrame stackFrame = new SolidityStackFrame(functionDefinition.getContract(),
+                functionDefinition,
+                arguments,
+                ast);
+
+        initializeLocalFunctionEnvironment(stackFrame, functionDefinition, arguments);
+
+        stackFrame.getScope().enterNode(functionDefinition, null);
+        callStack.push(stackFrame);
+        ast.setCurrentNode(functionDefinition);
+
+        // Perform interpretation
         ASTBlock body = functionDefinition.getBody();
         body.setCovered(true);
-        return interpretChildNodes(body);
+
+        Value result = interpretChildNodes(body);
+
+        // Cleanup
+        uninitializeLocalFunctionEnvironment(stackFrame, functionDefinition);
+        callStack.pop();
+
+        return result;
     }
 
     // Depth-first child node traversal for all paths
     protected Value interpretChildNodes(ASTNode currentNode) throws Exception {
         Value result = null;
         for (int i = 0; i < currentNode.getChildCount(); ++i) {
-            ast.setCurrentNode(currentNode.getChild(i));
-            result = doInterpret();
-            if (result != null) {
-                // Have return value - stop
+            result = interpretNode(currentNode.getChild(i));
+            if (currentStackFrame().getHaveReturnValue()) {
+                // Have return value (null if "empty"/"void")- stop
+                result = currentStackFrame().getReturnValue();
                 break;
             }
         }
@@ -252,11 +270,12 @@ public class FullInterpreter implements IInterpreterCallback {
         ArrayList<Expression> arguments = functionCall.getExpressionArguments(currentStackFrame().getContract(), currentVariableEnvironment);
 
         ASTEventDefinition eventDefinition = currentStackFrame().getContract().getEventDefinition(emitStatement.getName());
-        ArrayList<ASTVariableDeclaration> eventParamters = eventDefinition.getParameterList().toArrayList();
+        ArrayList<ASTVariableDeclaration> eventParameters = eventDefinition.getParameterList().toArrayList();
 
         for (int i = 0 ; i < arguments.size(); ++i) {
             Value result = expressionEvaluator.evaluateForAll(currentVariableEnvironment, arguments.get(i)).values.get(0);
-            argsObject.put(eventParamters.get(i).getName(), JSONValueConverter.objectFromValue(result));
+            argsObject.put(eventParameters.get(i).getName(),
+                    JSONValueConverter.objectFromValue(result));
         }
 
         eventObject.put("args", argsObject);
