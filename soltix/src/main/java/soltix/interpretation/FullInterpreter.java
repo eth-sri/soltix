@@ -52,6 +52,17 @@ public class FullInterpreter implements IInterpreterCallback {
     private ArrayList<Transaction> transactions;
     private ExpressionEvaluator expressionEvaluator;
 
+    private class BreakException extends Exception {
+        public BreakException(String text) {
+            super(text);
+        }
+    }
+    private class ContinueException extends Exception {
+        public ContinueException(String text) {
+            super(text);
+        }
+    }
+
     public FullInterpreter(ArrayList<Transaction> transactions) {
         this.transactions = transactions;
         // TODO Supply proper error handler policy to ensure stability for preceding iterations
@@ -82,7 +93,7 @@ public class FullInterpreter implements IInterpreterCallback {
         // TODO this currently produces a single huge line, which should be pretty-printed (maybe just use a nodejs
         // script to clean up the produced file)
         for (JSONObject object : emittedEventsJSONObjectList) {
-            file.write(object.toJSONString());
+            file.write(object.toJSONString() + "\n");
         }
         file.flush();
     }
@@ -212,6 +223,14 @@ public class FullInterpreter implements IInterpreterCallback {
             interpretIfStatement((ASTIfStatement) currentNode);
         } else if (currentNode instanceof ASTWhileStatement) {
             interpretWhileStatement((ASTWhileStatement) currentNode);
+        } else if (currentNode instanceof ASTDoWhileStatement) {
+            interpretDoWhileStatement((ASTDoWhileStatement) currentNode);
+        } else if (currentNode instanceof ASTForStatement) {
+            interpretForStatement((ASTForStatement) currentNode);
+        } else if (currentNode instanceof ASTBreakStatement) {
+            interpretBreakStatement((ASTBreakStatement) currentNode);
+        } else if (currentNode instanceof ASTContinueStatement) {
+            interpretContinueStatement((ASTContinueStatement) currentNode);
         } else if (currentNode instanceof ASTExpressionStatement) {
             interpretExpressionStatement((ASTExpressionStatement) currentNode);
         } else if (currentNode instanceof ASTLiteral
@@ -345,7 +364,7 @@ public class FullInterpreter implements IInterpreterCallback {
         // Interpret body
         if (((BoolValue) result).getValue() == true) {
             interpretNode(ifStatement.getIfBranch());
-        } else {
+        } else if (ifStatement.getElseBranch() != null) {
             interpretNode(ifStatement.getElseBranch());
         }
     }
@@ -363,10 +382,84 @@ public class FullInterpreter implements IInterpreterCallback {
 
             // Interpret body
             if (((BoolValue) result).getValue() == true) {
-                interpretNode(whileStatement.getBody());
+                try {
+                    interpretNode(whileStatement.getBody());
+                } catch (BreakException breakException) {
+                    break;
+                } catch (ContinueException continueException) {
+                    continue;
+                }
             } else {
                 break;
             }
         }
+    }
+
+    protected void interpretForStatement(ASTForStatement forStatement) throws Exception {
+        // Interpret initializer part
+        interpretNode(forStatement.getInitPart());
+
+        for (;;) {
+            // Interpret condition
+            Value result = interpretNode(forStatement.getCondPart());
+
+            if (!(result instanceof BoolValue)) {
+                Console.error(forStatement, "Unexpected for condition type - not bool for "
+                        + forStatement.getCondPart().toSolidityCode());
+                throw new Exception("interpretForStatement failed");
+            }
+
+            // Interpret body
+            if (((BoolValue) result).getValue() == true) {
+                try {
+                    interpretNode(forStatement.getBody());
+                } catch (BreakException breakException) {
+                    break;
+                } catch (ContinueException continueException) {
+                    ; // OK, continue with post-body statement below
+                }
+            } else {
+                break;
+            }
+
+            // Interpret post-body statement
+            interpretNode(forStatement.getLoopPart());
+        }
+    }
+
+    protected void interpretDoWhileStatement(ASTDoWhileStatement doWhileStatement) throws Exception {
+        for (;;) {
+            // Interpret loop body
+            try {
+                interpretNode(doWhileStatement.getBody());
+            } catch (BreakException breakException) {
+                break;
+            } catch (ContinueException continueException) {
+                ; // OK, continue with condition below
+            }
+
+            // Interpet condition
+            Value result = interpretNode(doWhileStatement.getCondition());
+
+            if (!(result instanceof BoolValue)) {
+                Console.error(doWhileStatement, "Unexpected do-while condition type - not bool for "
+                        + doWhileStatement.getCondition().toSolidityCode());
+                throw new Exception("interpretDoWhileStatement failed");
+            }
+
+            if (((BoolValue) result).getValue() == false) {
+                break;
+            }
+        }
+    }
+
+    protected void interpretBreakStatement(ASTBreakStatement breakStatement) throws Exception {
+        // Outer loops catch the exception or we'll error out. TODO proper error handling
+        throw new BreakException("Invalid break statement on line  " + breakStatement.getInputCodeLineNumber());
+    }
+
+    protected void interpretContinueStatement(ASTContinueStatement breakStatement) throws Exception {
+        // Outer loops catch the exception or we'll error out. TODO proper error handling
+        throw new ContinueException("Invalid continue statement on line  " + breakStatement.getInputCodeLineNumber());
     }
 }

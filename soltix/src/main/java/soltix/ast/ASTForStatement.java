@@ -38,6 +38,8 @@ public class ASTForStatement extends ASTNode implements IControlStructure {
     private ASTNode body = null;
 
     public ASTNode getInitPart() { return initPart; }
+    public ASTNode getCondPart() { return condPart; }
+    public ASTNode getLoopPart() { return loopPart; }
     public ASTNode getBody() { return body; }
 
     @Override

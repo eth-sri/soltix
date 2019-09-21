@@ -25,6 +25,7 @@ public class ASTDoWhileStatement extends ASTNode implements IControlStructure {
 
     public ASTDoWhileStatement(long id) throws Exception { super(id); }
 
+    public ASTNode getCondition() { return condition; }
     public ASTNode getBody() { return body; }
 
     @Override
