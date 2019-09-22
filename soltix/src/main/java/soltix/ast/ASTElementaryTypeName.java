@@ -82,7 +82,11 @@ public class ASTElementaryTypeName extends ASTNode {
             this.bits = extractBitsFromType(name);
             this.signed = extractIsSignedFromType(name);
         } else if (elementaryType == ElementaryType.ELEMENTARY_TYPE_BYTE) {
-            this.bytes = extractBytesCountFromType(name);
+            if (name.equals("bytes storage pointer")) {
+                this.bytes = 0;
+            } else {
+                this.bytes = extractBytesCountFromType(name);
+            }
         }
     }
 

@@ -20,10 +20,12 @@
 
 package soltix.interpretation.values;
 
+import soltix.ast.AST;
 import soltix.ast.ASTElementaryTypeName;
 import soltix.ast.ASTNode;
 import soltix.interpretation.Type;
 import soltix.interpretation.TypeContainer;
+import soltix.synthesis.ValueGenerator;
 
 import javax.swing.text.AbstractDocument;
 import java.math.BigInteger;
@@ -98,4 +100,22 @@ public class ValueContainer {
             return falseBoolValue;
         }
     }
+
+    static private Value zeroString = null;
+    static public Value getDefaultStorageValue(ValueGenerator valueGenerator, AST ast, ASTNode type) throws Exception {
+        if (Type.isIntegerType(type)) {
+            return getSmallIntegerValue(type, 0);
+        } else if (Type.isBoolType(type)) {
+            return getBoolValue(false);
+        } else if (Type.isStringType(type)) {
+            if (zeroString == null) {
+                zeroString = new StringValue("");
+            }
+            return zeroString;
+        } else { // bytes, struct, ...
+            // TODO cache this too
+            return valueGenerator.generateZeroValue(ast, type);
+        }
+    }
+
 }

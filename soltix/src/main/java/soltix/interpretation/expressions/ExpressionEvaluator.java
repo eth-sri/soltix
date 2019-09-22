@@ -398,12 +398,12 @@ public class ExpressionEvaluator {
                 if (valueSetIndex == VariableEnvironment.NO_VALUE_SET_SELECTED) {
                     if (environment.isRecordingChanges()) {
                         // Store a single value
-                        Value v = environment.resolveVariableValue(0, ((Variable) expression.getValue()).getName());
+                        Value v = environment.resolveVariableValueIncludingParentEnvironments(0, ((Variable) expression.getValue()).getName());
                         result.values.add(v);
                     } else {
                         // Resolve all variable values based on recorded profiling results
                         for (int i = 0; i < environment.getValueCount(); ++i) {
-                            Value v = environment.resolveVariableValue(i, ((Variable) expression.getValue()).getName());
+                            Value v = environment.resolveVariableValueIncludingParentEnvironments(i, ((Variable) expression.getValue()).getName());
                             //System.out.println("Resolved var " + ((Variable)expression.getValue()).getName());
                             //System.out.println("to " + v.toASTNode(false).toSolidityCode());
                             result.values.add(v);
@@ -412,7 +412,7 @@ public class ExpressionEvaluator {
                 } else {
                     // Resolve current variable value based on recorded profiling results
                     Value v;
-                    v = environment.resolveVariableValue(valueSetIndex, ((Variable) expression.getValue()).getName());
+                    v = environment.resolveVariableValueIncludingParentEnvironments(valueSetIndex, ((Variable) expression.getValue()).getName());
                     //System.out.println("Resolved var " + ((Variable)expression.getValue()).getName());
                     //System.out.println("to " + v.toASTNode(false).toSolidityCode());
                     result.values.add(v);

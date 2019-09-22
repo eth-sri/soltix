@@ -21,6 +21,7 @@ package soltix.interpretation.variables;
 
 import soltix.Configuration;
 import soltix.ast.AST;
+import soltix.ast.ASTContractDefinition;
 import soltix.interpretation.Type;
 import soltix.interpretation.expressions.Expression;
 import soltix.util.JSONValueConverter;
@@ -54,13 +55,14 @@ public class VariableEnvironment {
     //private int currentValueSetIndex = -1;
     public static final int NO_VALUE_SET_SELECTED = -1;
 
-
+    private VariableEnvironment parentVariableEnvironment;
 
     private boolean recordingChanges = false;
 
     // Integer variables (of interest for relational expression generation, unlike the other types)
 
-    public VariableEnvironment(AST ast, boolean recordingChanges) throws Exception {
+    public VariableEnvironment(AST ast,
+                               boolean recordingChanges) throws Exception {
         this(ast, null, 0, recordingChanges);
     }
 
@@ -96,6 +98,10 @@ public class VariableEnvironment {
         }
     }
 
+    public void setParentVariableEnvironment(VariableEnvironment parentVariableEnvironment) {
+        this.parentVariableEnvironment = parentVariableEnvironment;
+    }
+
     public Variable getVariable(String name) throws Exception {
         if (variables == null) {
             throw new Exception("VariableEnvironment.getVariable called on nonexistent variables map");
@@ -107,6 +113,15 @@ public class VariableEnvironment {
 
         return variables.get(name).getVariable();
     }
+
+    public Variable getVariableIncludingParentEnvironments(String name) throws Exception {
+        Variable variable = getVariable(name);
+        if (variable == null && parentVariableEnvironment != null) {
+            variable = parentVariableEnvironment.getVariable(name);
+        }
+        return variable;
+    }
+
 
     public VariableEnvironment createSingleValueSnapshot(int index) throws Exception {
         VariableEnvironment snapshotVariableEnvironment = new VariableEnvironment(ast, false);
@@ -137,19 +152,33 @@ public class VariableEnvironment {
         // Check type consistency of one representative value (if available) with variable type
         if (var.getType() == null) throw new Exception("Variable type is null for " + var.getName());
 
-        if (values.getValueCount() > 0
+        if (values.getValue(0) == null) {
+            if (!Type.isContractType(ast, var.getType())) {
+                throw new Exception("Invalid null value assigned to " + var.getName());
+            }
+        } else if (values.getValueCount() > 0
                 && values.getValue(0).getType() == null) {
             throw new Exception("Value type for variable " + var.getName() + " is null");
         }
 
         if (values.getValueCount() > 0
-            && !Type.isSameType(ast, var.getType(), values.getValue(0).getType())) {
-            throw new Exception("VariableEnvironment.addVariableValues: Added value with type "
-                    + values.getValue(0).getType().toSolidityCode()
-                    + " which is inconsistent with variable type " + var.getType().toSolidityCode()
-                    + " - classes " + values.getValue(0).getType().getClass().getName()
-                    + " vs " + var.getType().getClass().getName());
+                && values.getValue(0) != null
+                && !Type.isSameType(ast, var.getType(), values.getValue(0).getType())) {
+
+            // The value may be a contract/struct/enum while the type may be a "UDT" - work around this for now.
+            // TODO either characterize types as UDT everywhere or resolve contract/struct/enum type everywhere
+            if (Type.isContractType(ast, var.getType())
+                    && values.getValue(0).getType() instanceof ASTContractDefinition) {
+                ;
+            } else{
+                throw new Exception("VariableEnvironment.addVariableValues: Added value with type "
+                        + values.getValue(0).getType().toSolidityCode()
+                        + " which is inconsistent with variable type " + var.getType().toSolidityCode()
+                        + " - classes " + values.getValue(0).getType().getClass().getName()
+                        + " vs " + var.getType().getClass().getName());
+            }
         }
+
         variables.put(var.getName(), values);
         variablesList.add(values);
         if (Type.isIntegerType(var.getDeclaration().getTypeName())) {
@@ -357,6 +386,20 @@ public class VariableEnvironment {
         }
         return variableValues.getValue(valueSetIndex);
     }
+
+    public Value resolveVariableValueIncludingParentEnvironments(int valueSetIndex, String variableName) throws Exception {
+        Value value = null;
+        try {
+            value = resolveVariableValue(valueSetIndex, variableName);
+        } catch (Exception e) {
+
+        }
+        if (value == null && parentVariableEnvironment != null) {
+            value = parentVariableEnvironment.resolveVariableValue(valueSetIndex, variableName);
+        }
+        return value;
+    }
+
 
     public void printLatestToLogger(String variableName) throws Exception {
         // Show latest set of values

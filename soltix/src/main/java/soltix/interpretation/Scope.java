@@ -71,9 +71,11 @@ public class Scope {
         // Initialize scope with all variables declared in the contract
         this.contract = contract;
         this.interpreterCallback = interpreterCallback;
+        /*
+         // This is probably very undesirable because it leads to storing variables in multiple locations:
         for (ASTNode variable : contract.getVariables()) { // TODO better solution? This meshes global + given scope
             enterNode(variable, getInitializer(variable, interpreterCallback));
-        }
+        }*/
     }
 
     public void setVariableEnvironment(VariableEnvironment variableEnvironment) {

@@ -189,6 +189,15 @@ public class ValueGenerator {
         return new AddressValue(sb.toString());
     }
 
+
+    public Value generateZeroValue(AST ast, ASTNode type) throws Exception {
+        // Pretend that we're generating a random value, but make the PRNG yield zero values exclusively
+        prng.setGenerateZerosOnly(true);
+        Value result = generateRandomValue(ast, type, IntegerGenerationPolicy.INTEGER_GENERATION_POLICY_RANDOM);
+        prng.setGenerateZerosOnly(false);
+        return result;
+    }
+
     // General-purpose random value generation (for no specific context such as array indices)
     public Value generateRandomValue(AST ast, ASTNode type, IntegerGenerationPolicy integerPolicy) throws Exception {
         if (type instanceof ASTElementaryTypeName) {

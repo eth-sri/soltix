@@ -137,7 +137,7 @@ public class ASTTupleExpression extends ASTNode {
         }
         ArrayList<ASTNode> result = new ArrayList<ASTNode>();
         for (ASTNode component : tupleItems) {
-            result.add(ExpressionBuilder.fromASTNode(contractDefinition, environment, component).getType());
+            result.add(ExpressionBuilder.fromASTNode(ast, contractDefinition, environment, component).getType());
         }
         return result;
     }

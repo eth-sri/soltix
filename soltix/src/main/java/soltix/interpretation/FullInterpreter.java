@@ -28,10 +28,12 @@ import soltix.interpretation.expressions.ExpressionEvaluationErrorHandler;
 import soltix.interpretation.expressions.ExpressionEvaluator;
 import soltix.interpretation.values.BoolValue;
 import soltix.interpretation.values.Value;
+import soltix.interpretation.values.ValueContainer;
 import soltix.interpretation.variables.Variable;
 import soltix.interpretation.variables.VariableEnvironment;
 import soltix.interpretation.variables.VariableValues;
 import soltix.output.Console;
+import soltix.synthesis.ValueGenerator;
 import soltix.util.JSONValueConverter;
 import soltix.util.RandomNumbers;
 import org.json.simple.JSONObject;
@@ -51,6 +53,7 @@ public class FullInterpreter implements IInterpreterCallback {
     private ASTInterpreter astInterpreter;
     private ArrayList<Transaction> transactions;
     private ExpressionEvaluator expressionEvaluator;
+    private ValueGenerator valueGenerator;
 
     private class BreakException extends Exception {
         public BreakException(String text) {
@@ -73,6 +76,7 @@ public class FullInterpreter implements IInterpreterCallback {
         this.astInterpreter = astInterpreter;
         ast = astInterpreter.getAST();
         emittedEventsJSONObjectList = new ArrayList<JSONObject>();
+        valueGenerator = new ValueGenerator(new RandomNumbers(Configuration.randomNumbersSeed));
     }
 
     public ASTInterpreter.NavigationPolicy getNavigationPolicy() {
@@ -154,19 +158,23 @@ public class FullInterpreter implements IInterpreterCallback {
             // Start out with initializer value
             Value initializerValue = variableDeclaration.getInitializerValue();
             if (initializerValue == null) {
-                // TODO no initializer given - construct default (null) value for this item
-                // initializerValue = ValueContainer....
-                Util.unimpl();
+                // No initializer given - construct default (zero) value for this item, but only if it is not a
+                // contract type, because contract values are initialized to null
+                if (Type.isContractType(ast, variableDeclaration.getTypeName())) {
+                    ;
+                } else {
+                    initializerValue = ValueContainer.getDefaultStorageValue(valueGenerator, ast, variableDeclaration.getTypeName());
+                }
             }
             variableValues.addValue(initializerValue);
             globalEnvironment.addVariableValues(variable, variableValues);
         }
     }
 
-    protected void initializeLocalFunctionEnvironment(SolidityStackFrame stackFrame, /* Transaction transaction*/
+    protected void initializeLocalFunctionEnvironment(SolidityStackFrame stackFrame,
                                                       ASTFunctionDefinition functionDefinition,
                                                       ArrayList<Value> arguments) throws Exception {
-        ArrayList<ASTVariableDeclaration> parameterList = /*transaction.getFunction()*/functionDefinition.getParameterList().toArrayList();
+        ArrayList<ASTVariableDeclaration> parameterList = functionDefinition.getParameterList().toArrayList();
         for (int i = 0; i < parameterList.size(); ++i) {
             ASTVariableDeclaration parameter = parameterList.get(i);
            // Variable variable = new Variable(parameter);
@@ -180,9 +188,9 @@ public class FullInterpreter implements IInterpreterCallback {
         }
     }
 
-    protected void uninitializeLocalFunctionEnvironment(SolidityStackFrame stackFrame, /*Transaction transaction*/
+    protected void uninitializeLocalFunctionEnvironment(SolidityStackFrame stackFrame,
                                                         ASTFunctionDefinition functionDefinition) throws Exception {
-        ArrayList<ASTVariableDeclaration> parameterList = /*transaction.getFunction()*/functionDefinition.getParameterList().toArrayList();
+        ArrayList<ASTVariableDeclaration> parameterList = functionDefinition.getParameterList().toArrayList();
         for (int i = 0; i < parameterList.size(); ++i) {
             ASTVariableDeclaration parameter = parameterList.get(i);
             stackFrame.getScope().leaveNode(parameter);
@@ -191,12 +199,10 @@ public class FullInterpreter implements IInterpreterCallback {
 
 
     public Value interpretNode(ASTNode currentNode) throws Exception {
-        //ASTNode currentNode = ast.getCurrentNode();
         ast.setCurrentNode(currentNode);
         Scope currentScope = currentStackFrame() != null? currentStackFrame().getScope(): null;
 
         currentNode.setCovered(true);
-        //if (currentScope != null) { // may be null for the first function call initiating the transaction
 
         // Process the current item for the scope to e.g. introduce a declaration if it is a variable.
         // If this is a function, the step will be performed as part of the function interpretation because
@@ -257,6 +263,7 @@ public class FullInterpreter implements IInterpreterCallback {
         // Set up stack frame
         SolidityStackFrame stackFrame = new SolidityStackFrame(functionDefinition.getContract(),
                 functionDefinition,
+                globalEnvironment, // global env is always the fallback, otherwise we would run into local vars clashes
                 this,
                 arguments,
                 ast);
@@ -331,11 +338,13 @@ public class FullInterpreter implements IInterpreterCallback {
 
     protected Value interpretExpression(ASTNode node) throws Exception {
         VariableEnvironment currentVariableEnvironment = currentStackFrame().getScope().getVariableEnvironment();
-        Expression expression = ExpressionBuilder.fromASTNode(currentStackFrame().getContract(),
+        Expression expression = ExpressionBuilder.fromASTNode(ast,
+                                                              currentStackFrame().getContract(),
                                                               currentVariableEnvironment,
                                                               node);
         Value result = expressionEvaluator.evaluateForAll(currentVariableEnvironment,
-                ExpressionBuilder.fromASTNode(currentStackFrame().getContract(),
+                ExpressionBuilder.fromASTNode(ast,
+                        currentStackFrame().getContract(),
                         currentVariableEnvironment,
                         node)).values.get(0);
         return result;
@@ -345,7 +354,8 @@ public class FullInterpreter implements IInterpreterCallback {
         // Evaluate argument
         VariableEnvironment currentVariableEnvironment = currentStackFrame().getScope().getVariableEnvironment();
         Value result = expressionEvaluator.evaluateForAll(currentVariableEnvironment,
-                            ExpressionBuilder.fromASTNode(currentStackFrame().getContract(),
+                            ExpressionBuilder.fromASTNode(ast,
+                                                          currentStackFrame().getContract(),
                                                           currentVariableEnvironment,
                                                           returnStatement.getArgument())).values.get(0);
         currentStackFrame().setReturnValue(result);

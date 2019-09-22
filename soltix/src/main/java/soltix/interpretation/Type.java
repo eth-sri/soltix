@@ -66,6 +66,11 @@ public class Type {
             && ast.getStructDefinition(type.getName()) != null;
     }
 
+    public static ASTStructDefinition getStructType(AST ast, ASTNode type) {
+        return type instanceof ASTUserDefinedTypeName?
+                ast.getStructDefinition(type.getName()): null;
+    }
+
     public static boolean isContractType(AST ast, ASTNode type) {
         return type instanceof ASTUserDefinedTypeName
             && ast.getContract(type.getName()) != null;

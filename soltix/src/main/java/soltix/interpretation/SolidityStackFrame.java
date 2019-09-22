@@ -39,6 +39,7 @@ public class SolidityStackFrame {
 
     public SolidityStackFrame(ASTContractDefinition contract,
                               ASTFunctionDefinition function,
+                              VariableEnvironment globalVariableEnvironment,
                               FullInterpreter interpreter,
                               ArrayList<Value> arguments,
                               AST ast/*,
@@ -48,6 +49,7 @@ public class SolidityStackFrame {
         this.arguments = arguments;
         scope = new Scope(contract, interpreter);
         VariableEnvironment localVariableEnvironment = new VariableEnvironment(ast, true);
+        localVariableEnvironment.setParentVariableEnvironment(globalVariableEnvironment); // TODO better approach?
         scope.setVariableEnvironment(localVariableEnvironment);
     }
 

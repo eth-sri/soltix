@@ -28,6 +28,7 @@ public class ASTStructDefinition extends UserDefinedType {
     // ... and once in ArrayList to guarantee preservation of field order (storage organization may
     // otherwise make a difference)
     private ArrayList<ASTVariableDeclaration> membersList;
+    private HashMap<String, ASTVariableDeclaration> membersMap;
     private boolean containsMapping = false;
     private boolean haveDeepContainsMapping = false;
 
@@ -71,6 +72,10 @@ public class ASTStructDefinition extends UserDefinedType {
 
     public ArrayList<ASTVariableDeclaration> getMembers() { return membersList; }
 
+    public ASTVariableDeclaration lookupMember(String name) {
+        return membersMap.get(name);
+    }
+
 
     @Override
     public String toSolidityCode() {
@@ -85,6 +90,7 @@ public class ASTStructDefinition extends UserDefinedType {
     public void finalize() throws Exception {
         //membersMap = new HashMap<String, ASTNode>();
         membersList = new ArrayList<ASTVariableDeclaration>();
+        membersMap = new HashMap<String, ASTVariableDeclaration>();
         for (int i = 0; i < getChildCount(); ++i) {
             if (!(getChild(i) instanceof ASTVariableDeclaration)) {
                 throw new Exception("Struct member item with unexpected type " + getChild(i));
@@ -98,6 +104,7 @@ public class ASTStructDefinition extends UserDefinedType {
                 containsMapping = true;
             }
             membersList.add(declaration);
+            membersMap.put(declaration.getName(), declaration);
         }
 
         /*

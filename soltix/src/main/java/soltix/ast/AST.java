@@ -50,7 +50,8 @@ public class AST {
 
     private ArrayList<ASTContractDefinition> contracts = new ArrayList<ASTContractDefinition>();
     private HashMap<String, ASTEnumDefinition> enumDefinitions = new HashMap<String, ASTEnumDefinition>();
-    private HashMap<String, ASTStructDefinition> structDefinitions  = new HashMap<String, ASTStructDefinition>();
+    private HashMap<String, ASTStructDefinition> structDefinitions = new HashMap<String, ASTStructDefinition>();
+    private HashMap<String, ASTStructDefinition> structDefinitionsByCanonicalName = new HashMap<String, ASTStructDefinition>();
     private ArrayList<ASTVariableDeclaration> topLevelVariables = new ArrayList<ASTVariableDeclaration>();
     private ArrayList<FunctionScope> functions = new ArrayList<FunctionScope>();
     private HashMap<Long, ASTVariableDeclaration> allVariablesById = new HashMap<Long, ASTVariableDeclaration>();
@@ -72,7 +73,13 @@ public class AST {
     }
 
     public ASTEnumDefinition getEnumDefinition(String name) { return enumDefinitions.get(name); }
-    public ASTStructDefinition getStructDefinition(String name) { return structDefinitions.get(name); }
+    public ASTStructDefinition getStructDefinition(String name) {
+        ASTStructDefinition definition = structDefinitions.get(name);
+        if (definition == null) {
+            definition = structDefinitionsByCanonicalName.get(name);
+        }
+        return definition;
+    }
     public Collection<ASTStructDefinition> getStructDefinitions() { return structDefinitions.values(); }
 
     public ASTNode getRoot() { return root; }
@@ -106,6 +113,7 @@ public class AST {
     // Can be used to add a struct definition while generating contracts - bypassing child node + finalize() structures
     public void addStructDefinition(ASTStructDefinition definition) {
         structDefinitions.put(definition.getName(), definition);
+        structDefinitionsByCanonicalName.put(definition.getCanonicalName(), definition);
     }
 
     // Add new inner node that will be followed by one or more further child nodes,
@@ -164,6 +172,7 @@ public class AST {
             enumDefinitions.put(node.getName(), (ASTEnumDefinition) node);
         } else if (node instanceof ASTStructDefinition) {
             structDefinitions.put(node.getName(), (ASTStructDefinition)node);
+            structDefinitionsByCanonicalName.put(((ASTStructDefinition) node).getCanonicalName(), (ASTStructDefinition)node);
         } else if (node instanceof ASTIndexAccess) {
             currentContract.addIndexAccess((ASTIndexAccess)node);
         }

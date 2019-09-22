@@ -58,7 +58,7 @@ public class ASTFunctionCall extends ASTNode {
         if (expressionArguments == null) {
             expressionArguments = new ArrayList<Expression>();
             for (ASTNode argument : arguments) {
-                Expression expressionArgument = ExpressionBuilder.fromASTNode(contract, environment, argument);
+                Expression expressionArgument = ExpressionBuilder.fromASTNode(ast, contract, environment, argument);
                 expressionArguments.add(expressionArgument);
             }
         }

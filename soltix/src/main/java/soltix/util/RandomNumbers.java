@@ -29,13 +29,17 @@ public class RandomNumbers {
     // TODO Replace Random with a custom PRNG implementation? To guarantee that the same code revision + configuration
     // + PRNG seed reproduce the program's behavior, which may not be the case for Java's PRNG across different versions
     private Random prng;
+    private boolean generateZerosOnly = false;
 
     public RandomNumbers(int seed) {
         prng = new Random(seed);
     }
 
+    public void setGenerateZerosOnly(boolean generateZerosOnly) { this.generateZerosOnly = generateZerosOnly; }
+    public boolean getGenerateZerosOnly() { return generateZerosOnly; }
+
     public double generateDouble() {
-        return prng.nextDouble();
+        return generateZerosOnly? 0.0: prng.nextDouble();
     }
 
     public long generateLongInteger(long minValue, long maxValue) {
@@ -50,6 +54,9 @@ public class RandomNumbers {
     }
 
     public BigInteger generatePositiveBigInteger(BigInteger limit) {
+        if (generateZerosOnly) {
+            return BigInteger.valueOf(0);
+        }
         BigInteger result;
         do {
             result = new BigInteger(limit.bitLength(), prng);
