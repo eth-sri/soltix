@@ -76,18 +76,24 @@ public class ExpressionBuilder {
 
                 // Look up called function (note: function declarations without body are also ASTFunctionDefinitions)
                 ASTFunctionDefinition functionDefinition = contractDefinition.getFunction(functionCall.getCalled().getName());
+                ASTNode returnType = null;
 
                 if (functionDefinition == null) {
-                    Console.error(functionCall, "Cannot locate function '" + functionCall.getCalled().getName()
-                            + "', in call " + functionCall.toSolidityCode());
-                    throw new Exception("ExpressionBuilder.fromASTNode failed");
+                    if (functionCall.getCalled().getName().equals("keccak256")) {
+                        // Builtin
+                        returnType = new ASTElementaryTypeName(0, ASTElementaryTypeName.VARIABLE_LENGTH_BYTES_TYPE_NAME);
+                    } else {
+                        Console.error(functionCall, "Cannot locate function '" + functionCall.getCalled().getName()
+                                + "', in call " + functionCall.toSolidityCode());
+                        throw new Exception("ExpressionBuilder.fromASTNode failed");
+                    }
+                } else {
+                    returnType = functionDefinition.getReturnType();
+                    functionCall.setInterpretationFunctionDefinition(functionDefinition);
                 }
                 ArrayList<Expression> arguments = functionCall.getExpressionArguments(contractDefinition, environment);
-
-                ASTNode returnType = functionDefinition.getReturnType();
-
                 // Build Expression objects for all function arguments
-                functionCall.setInterpretationFunctionDefinition(functionDefinition);
+
                 Expression callExpression = new Expression(functionCall, arguments, returnType);
                 result = callExpression;
             }

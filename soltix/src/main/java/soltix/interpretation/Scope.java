@@ -20,11 +20,15 @@
 
 package soltix.interpretation;
 
+import soltix.Configuration;
 import soltix.ast.*;
 import soltix.interpretation.expressions.Expression;
 import soltix.interpretation.expressions.ExpressionBuilder;
 import soltix.interpretation.values.Value;
+import soltix.interpretation.values.ValueContainer;
 import soltix.interpretation.variables.*;
+import soltix.synthesis.ValueGenerator;
+import soltix.util.RandomNumbers;
 import soltix.util.Util;
 
 import java.util.ArrayList;
@@ -44,6 +48,7 @@ public class Scope {
     // Some scope operations require interpretations for variable initializers.
     // TODO this should probably be restructured, but for now we pass an interpreter callback
     private FullInterpreter interpreterCallback = null;
+    private ValueGenerator valueGenerator = null;
 
     private ASTContractDefinition contract = null;
     private FunctionScope currentFunction = null; // function or modifier definition
@@ -71,6 +76,11 @@ public class Scope {
         // Initialize scope with all variables declared in the contract
         this.contract = contract;
         this.interpreterCallback = interpreterCallback;
+        if (interpreterCallback == null) { // may not always be available
+            valueGenerator = new ValueGenerator(new RandomNumbers(Configuration.randomNumbersSeed));
+        } else {
+            valueGenerator = interpreterCallback.getValueGenerator();
+        }
         /*
          // This is probably very undesirable because it leads to storing variables in multiple locations:
         for (ASTNode variable : contract.getVariables()) { // TODO better solution? This meshes global + given scope
@@ -118,10 +128,12 @@ public class Scope {
 
         if (variableEnvironment != null) {
             if (initializer == null) {
-                // TODO use default initializer, unify this with other unimplemented initializer part
-                System.out.println("cannot add " + declaration.getName());
-                Util.unimpl();
+                // Use default initializer
+                initializer = ValueContainer.getDefaultStorageValue(valueGenerator,
+                        variableEnvironment.getAST(),
+                        declaration.getTypeName());
             }
+            
             VariableValues values = new VariableValues(variable, 0);
             values.addValue(initializer);
             variableEnvironment.addVariableValues(variable, values);
@@ -135,8 +147,12 @@ public class Scope {
             if (interpreterCallback != null) {
                 // Evaluate initializer expression
                 ASTNode initializerCode = ((ASTVariableDeclarationStatement) node).getInitializer();
-                Value initializerValue = interpreterCallback.interpretNode(initializerCode);
-                return initializerValue;
+                if (initializerCode != null) {
+                    Value initializerValue = interpreterCallback.interpretNode(initializerCode);
+                    return initializerValue;
+                } else {
+                    return null;
+                }
             } else {
                 return null;
             }

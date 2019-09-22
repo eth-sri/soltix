@@ -60,6 +60,8 @@ public class BytesValue extends Value implements IByteOperations {
         return type.getBytes();
     }
 
+    public byte[] getValue() { return value; }
+
     @Override
     public ASTNode getType() { return type; }
 

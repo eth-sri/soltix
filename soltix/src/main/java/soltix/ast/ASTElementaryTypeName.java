@@ -57,6 +57,8 @@ public class ASTElementaryTypeName extends ASTNode {
         return bytes;
     }
 
+    static public final String VARIABLE_LENGTH_BYTES_TYPE_NAME = "bytes storage pointer";
+
     //
     // Constructor to extract type from string - can fail (exception)
     public ASTElementaryTypeName(long id, String name) throws Exception {
@@ -82,7 +84,7 @@ public class ASTElementaryTypeName extends ASTNode {
             this.bits = extractBitsFromType(name);
             this.signed = extractIsSignedFromType(name);
         } else if (elementaryType == ElementaryType.ELEMENTARY_TYPE_BYTE) {
-            if (name.equals("bytes storage pointer")) {
+            if (name.equals(VARIABLE_LENGTH_BYTES_TYPE_NAME)) {
                 this.bytes = 0;
             } else {
                 this.bytes = extractBytesCountFromType(name);

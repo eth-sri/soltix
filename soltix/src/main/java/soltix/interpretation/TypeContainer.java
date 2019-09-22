@@ -29,6 +29,8 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 
+import static soltix.ast.ASTElementaryTypeName.VARIABLE_LENGTH_BYTES_TYPE_NAME;
+
 /**
  * Class to produce and cache types.
  */
@@ -81,7 +83,7 @@ public class TypeContainer {
         }
         ASTElementaryTypeName type = typesByte.get(bytes);
         if (type == null) {
-            type = new ASTElementaryTypeName(0, "bytes" + String.valueOf(bytes));
+            type = new ASTElementaryTypeName(0, bytes == 0? VARIABLE_LENGTH_BYTES_TYPE_NAME: "bytes" + String.valueOf(bytes));
             typesByte.put(bytes, type);
         }
         return type;

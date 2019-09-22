@@ -98,6 +98,8 @@ public class VariableEnvironment {
         }
     }
 
+    public AST getAST() { return ast; }
+
     public void setParentVariableEnvironment(VariableEnvironment parentVariableEnvironment) {
         this.parentVariableEnvironment = parentVariableEnvironment;
     }
@@ -242,23 +244,31 @@ public class VariableEnvironment {
     }
 
     public void updateVariableValue(Expression expression, Value value) throws Exception {
-        /*
-        Expression tempExpression = expression;
-
-        // Navigate past struct member access to get access to the base variable
-        while (tempExpression.getMemberAccess() != null) {
-            tempExpression = tempExpression.getFirstOperand();
-        }
-        if (!(tempExpression.getValue() instanceof Variable)) {
-            throw new Exception("updateVariableValue for unimplemented expression type");
-        }*/
-
-
         Variable variable = tryLookupVariableByExpression(expression);
         if (variable == null) {
             throw new Exception("updateVariableValue for unimplemented expression type");
         }
         updateVariableValue(variable, expression, value);
+    }
+
+    public void updateVariableValueIncludingParentEnvironments(Expression expression, Value value) throws Exception {
+        Variable variable = tryLookupVariableByExpression(expression);
+        if (variable == null) {
+            throw new Exception("updateVariableValue for unimplemented expression type");
+        }
+        updateVariableValueIncludingParentEnvironments(variable, expression, value);
+    }
+
+    public void updateVariableValueIncludingParentEnvironments(Variable variable, Expression expression, Value value) throws Exception {
+        try {
+            updateVariableValue(variable, expression, value);
+        } catch (Exception e) {
+            if (parentVariableEnvironment != null) {
+                parentVariableEnvironment.updateVariableValueIncludingParentEnvironments(variable, expression, value);
+            } else {
+                throw e;
+            }
+        }
     }
 
     // TODO This desperately needs unit tests for partial value updates
@@ -284,6 +294,11 @@ public class VariableEnvironment {
         // Partial update on a struct member (TODO: Array elements)
 
         VariableValues variableValues = variables.get(variable.getName());
+        if (variableValues == null) {
+            throw new Exception("VariableEnvironment.updateVariableValue cannot find variable "
+                    + variable.getName()
+                    + " in expression " + expression.toASTNode().toSolidityCode());
+        }
         if (variableValues.getValueCount() != 1) {
             // We could use the most recent value, and that may even be desirable if we're generating profiling
             // logs during execution. But for now a single value is assumed

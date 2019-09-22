@@ -68,6 +68,10 @@ public class StringValue extends Value {
         return new ASTLiteral(0, "", /*value*/textRepresentation, LITERAL_TYPE_STRING, null); // TODO or use ASTVerbatimText?
     }
 
+    public Value convertToBytesType() throws Exception {
+        return new BytesValue(TypeContainer.getByteType(0), value.getBytes("UTF-8"));
+    }
+
     @Override
     public Object toJSONRepresentation() {
         return /*value*/textRepresentation;

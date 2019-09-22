@@ -352,7 +352,7 @@ public class ExpressionEvaluator {
                         }
                     } else {
                         resultValues = new ComputedValues();
-                        resultValues.values.add(evaluateKeccak256ForOne((StringValue) argumentValues.values.get(0)));
+                        resultValues.values.add(evaluateKeccak256ForOne(((StringValue) argumentValues.values.get(0)).getValue().getBytes("UTF-8")));
                     }
                 } else if (interpreter != null) {
                     // This call can be interpreted - first evaluate function arguments
@@ -479,8 +479,10 @@ public class ExpressionEvaluator {
             }
 
             // Evaluate LHS operand
-            /*ComputedValues firstOperandValues;
-            firstOperandValues = evaluate(environment, valueSetIndex, expression.getFirstOperand(), reevaluating);*/
+            // TODO this needs to be done at the latest once we have arrays so the LHS may contain side effects. a[i++] = x; ...
+            // Constructs like "f().x = y;" - with f() returning a contract reference - are rejected due to lvalue errors
+       //     ComputedValues firstOperandValues;
+       //     firstOperandValues = evaluate(environment, valueSetIndex, expression.getFirstOperand(), reevaluating);
 
             // Adapt RHS operand to include a conversion operation to the LHS operand's type
             Expression convertedRHS = new Expression(expression.getSecondOperand(), expression.getFirstOperand().getType());
@@ -490,14 +492,9 @@ public class ExpressionEvaluator {
             secondOperandValues = evaluate(environment, valueSetIndex, convertedRHS, reevaluating);
 
             // Store assignment
-            if (!(expression.getFirstOperand().getValue() instanceof Variable)) { // TODO proper lookup for structs, arrays
-                Util.unimpl();
-            }
-            Variable variable = (Variable)expression.getFirstOperand().getValue();
-
             for (int i = 0; i < secondOperandValues.values.size(); ++i) {
                 Value value = secondOperandValues.values.get(i);
-                environment.updateVariableValue(variable, value);
+                environment.updateVariableValueIncludingParentEnvironments(/*variable*/expression.getFirstOperand(), value); // TODO multi-item computations?
             }
             resultValues = secondOperandValues;
         } else {
@@ -549,41 +546,19 @@ public class ExpressionEvaluator {
         return values;
     }
 
-    protected Value evaluateKeccak256ForOne(StringValue input) throws Exception {
-        byte[] hash = Hash.keccak256(input.getValue().getBytes("UTF-8"));
+    protected Value evaluateKeccak256ForOne(byte[] data /*StringValue input*/) throws Exception {
+        byte[] hash = Hash.keccak256(data /*input.getValue().getBytes("UTF-8")*/);
         return new BytesValue(TypeContainer.getByteType(32), hash);
     }
 
     protected ComputedValues evaluateKeccak256ForAll(ComputedValues stringValues) throws Exception {
         ComputedValues result = new ComputedValues();
-
-        /*
-        // Compute some dummy hash instead of a real Keccak256.
-        // Later we may wish to use:
-        // https://github.com/ethereum/ethereumj/tree/develop/ethereumj-core/src/main/java/org/ethereum/crypto/cryptohash
-        // for a Java implementation
-        for (Value stringValue : stringValues.values) {
-            String str = ((StringValue)stringValue).getValue();
-            long hash = 0;
-            for (int i = 0; i < str.length(); ++i) {
-                hash = (33 * hash + str.charAt(i)) & 0xffffffff;
-            }
-            byte[] resultBytes = new byte[32];
-            for (int i = 0; i < resultBytes.length; i += 4) {
-                resultBytes[i]   = (byte)(hash & 0xff);
-                resultBytes[i+1] = (byte)((hash & 0xff00) >> 8);
-                resultBytes[i+2] = (byte)((hash & 0xff0000) >> 16);
-                resultBytes[i+3] = (byte)((hash & 0xff000000) >> 24);
-            }
-            result.values.add(new BytesValue(TypeContainer.getByteType(32), resultBytes));
-        }
-       */
         for (Value value : stringValues.values) {
-            /*StringValue stringValue = (StringValue)value;
-            byte[] hash = Hash.keccak256(stringValue.getValue().getBytes());
-            result.values.add(new BytesValue(TypeContainer.getByteType(32), hash));
-            */
-            Value bytesResult = evaluateKeccak256ForOne((StringValue)value);
+            // TODO bytes/string interchangeability is unlikely to be correct - how exactly is it defined?
+            byte[] data = value instanceof StringValue?
+                                ((StringValue)value).getValue().getBytes("UTF-8"):
+                                ((BytesValue)value).getValue();
+            Value bytesResult = evaluateKeccak256ForOne(data); //(StringValue)value);
             result.values.add(bytesResult);
         }
         return result;
@@ -608,7 +583,13 @@ public class ExpressionEvaluator {
                 Value convertedValue = ((IntegerValue) value).convertToBytesType((ASTElementaryTypeName) targetType);
                 result.values.add(convertedValue);
             } else if (Type.isIntegerType(sourceType) && Type.isAddressType(targetType)) {
-                Value convertedValue = ((IntegerValue)value).convertToAddressType();
+                Value convertedValue = ((IntegerValue) value).convertToAddressType();
+                result.values.add(convertedValue);
+            } else if (Type.isStringType(sourceType)
+                    && Type.isByteType(targetType)
+                    && ((ASTElementaryTypeName)targetType).getBytes() == 0) {
+                // bytes(string), typically for keccak256 arguments for now
+                Value convertedValue = ((StringValue) value).convertToBytesType();
                 result.values.add(convertedValue);
             } else {
                 throw new Exception("Unimplemented cast from " + sourceType.toSolidityCode() + " to " + targetType.toSolidityCode());
@@ -1034,7 +1015,7 @@ public class ExpressionEvaluator {
                             ? integerValue.sub(ValueContainer.getSmallIntegerValue(integerValue.getType(), 1))
                                 : integerValue.add(ValueContainer.getSmallIntegerValue(integerValue.getType(), 1));
                     // Update side effect on operand expression 
-                    environment.updateVariableValue(operandSourceExpression, alteredValue);
+                    environment.updateVariableValueIncludingParentEnvironments(operandSourceExpression, alteredValue);
                 }
                 // TODO The variable change would need to be reflected in the environment for full interpretation
                 return integerValue;
@@ -1042,14 +1023,14 @@ public class ExpressionEvaluator {
                 Value newValue = integerValue.sub(ValueContainer.getSmallIntegerValue(integerValue.getType(), 1));
                 if (environment.isRecordingChanges()) {
                     // Update side effect on operand expression 
-                    environment.updateVariableValue(operandSourceExpression, newValue);
+                    environment.updateVariableValueIncludingParentEnvironments(operandSourceExpression, newValue);
                 }
                 return newValue;
             } else if (operator == ASTUnaryOperation.Operator.OP_INC_PRE) {
                 Value newValue = integerValue.add(ValueContainer.getSmallIntegerValue(integerValue.getType(), 1));
                 if (environment.isRecordingChanges()) {
                     // Update side effect on operand expression 
-                    environment.updateVariableValue(operandSourceExpression, newValue);
+                    environment.updateVariableValueIncludingParentEnvironments(operandSourceExpression, newValue);
                 }
                 return newValue;
             } else if (operator == ASTUnaryOperation.Operator.OP_MINUS) {

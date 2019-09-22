@@ -79,6 +79,10 @@ public class FullInterpreter implements IInterpreterCallback {
         valueGenerator = new ValueGenerator(new RandomNumbers(Configuration.randomNumbersSeed));
     }
 
+    public ValueGenerator getValueGenerator() {
+        return valueGenerator;
+    }
+
     public ASTInterpreter.NavigationPolicy getNavigationPolicy() {
         return ASTInterpreter.NavigationPolicy.NAVIGATION_POLICY_FULL_INTERPRETATION;
     }
