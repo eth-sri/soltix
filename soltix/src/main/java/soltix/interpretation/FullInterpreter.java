@@ -114,11 +114,13 @@ public class FullInterpreter implements IInterpreterCallback {
     }
 
     public void run() throws Exception {
-        initializeGlobalEnvironment(transactions.get(0).getContract()); // TODO multiple contracts?
+        //initializeGlobalEnvironment(transactions.get(0).getContract()); // TODO multiple contracts?
+        createGlobalEnvironment(); // TODO multiple contracts?
         for (Transaction transaction : transactions) {
             Value result = interpretTransaction(transaction);
             // TODO use result
         }
+        globalEnvironment = null;
     }
 
 
@@ -144,14 +146,16 @@ public class FullInterpreter implements IInterpreterCallback {
 
 
 
-
     private VariableEnvironment globalEnvironment;
+    private boolean initializedGlobalEnvironment = false;
 
-    protected void initializeGlobalEnvironment(ASTContractDefinition currentContract) throws Exception {
+    protected void createGlobalEnvironment() throws Exception {
         // Prepare variable environment, which will hold a single, continuously updated value set while synthesizing
         // expressions
-        globalEnvironment = new VariableEnvironment(ast,true);
+        globalEnvironment = new VariableEnvironment(ast, true);
+    }
 
+    protected void initializeGlobalEnvironment(ASTContractDefinition currentContract) throws Exception {
         // Generate storage variables
         for (ASTNode tmp : currentContract.getVariables()) {
             ASTVariableDeclaration variableDeclaration = (ASTVariableDeclaration)tmp;
@@ -162,14 +166,22 @@ public class FullInterpreter implements IInterpreterCallback {
             // Start out with initializer value
             Value initializerValue = variableDeclaration.getInitializerValue();
             if (initializerValue == null) {
-                // No initializer given - construct default (zero) value for this item, but only if it is not a
-                // contract type, because contract values are initialized to null
-                if (Type.isContractType(ast, variableDeclaration.getTypeName())) {
-                    ;
-                } else {
-                    initializerValue = ValueContainer.getDefaultStorageValue(valueGenerator, ast, variableDeclaration.getTypeName());
+                ASTNode initializerCode = variableDeclaration.getInitializer();
+                if (initializerCode != null) {
+                    initializerValue = interpretNode(initializerCode);
+                }
+
+                if (initializerValue == null) {
+                    // No initializer given - construct default (zero) value for this item, but only if it is not a
+                    // contract type, because contract values are initialized to null
+                    if (Type.isContractType(ast, variableDeclaration.getTypeName())) {
+                        ;
+                    } else {
+                        initializerValue = ValueContainer.getDefaultStorageValue(valueGenerator, ast, variableDeclaration.getTypeName());
+                    }
                 }
             }
+
             variableValues.addValue(initializerValue);
             globalEnvironment.addVariableValues(variable, variableValues);
         }
@@ -213,7 +225,9 @@ public class FullInterpreter implements IInterpreterCallback {
         // it first needs to set up a stack frame with a new scope.
         // The first interpreted node must be a function definition to ensure that a stack + scope exists.
         if (!(currentNode instanceof ASTFunctionDefinition)) {
-            currentScope.enterNode(currentNode, null); // TODO initializer?
+            if (currentScope != null) { // may still be null during storage initializer evaluation
+                currentScope.enterNode(currentNode, null); // TODO initializer?
+            }
         }
 
         Value returnValue = null;
@@ -272,11 +286,22 @@ public class FullInterpreter implements IInterpreterCallback {
                 arguments,
                 ast);
 
-        initializeLocalFunctionEnvironment(stackFrame, functionDefinition, arguments);
+
 
         stackFrame.getScope().enterNode(functionDefinition, null);
         callStack.push(stackFrame);
         ast.setCurrentNode(functionDefinition);
+
+        if (!initializedGlobalEnvironment) {
+            // Due to expression evaluation for initializers requiring a variable environment and potentially other
+            // stack frame elements, we initialize storage variables at the first function call.
+            // An unpleasant example that requires variable processing is:
+            //    int x = 5;
+            //    int y = x;
+            initializeGlobalEnvironment(functionDefinition.getContract());
+            initializedGlobalEnvironment = true;
+        }
+        initializeLocalFunctionEnvironment(stackFrame, functionDefinition, arguments);
 
         // Perform interpretation
         /*

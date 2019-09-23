@@ -83,6 +83,8 @@ public class ASTVariableDeclaration extends ASTNode {
                    || ((ASTFunctionDefinition)getParent().getParent()).getVisibility() != Definitions.Visibility.VISIBILITY_EXTERNAL);
     }
 
+    // TODO ASTNode vs Value initializers is asking for trouble
+    public ASTNode getInitializer() { return initializer; }
     public void setInitializerValue(Value value) { 
         this.initializerValue = value; 
     }

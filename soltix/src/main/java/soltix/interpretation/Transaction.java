@@ -78,7 +78,13 @@ public class Transaction {
         String functionName = (String)jsonObject.get("function");
 
         contract = ast.getContract(contractName);
+        if (contract == null) {
+            throw new Exception("Transaction.fromJSONObject: reference to undefined contract " + contractName);
+        }
         function = contract.getFunction(functionName);
+        if (function == null) {
+            throw new Exception("Transaction.fromJSONObject: reference to undefined function " + functionName);
+        }
 
         JSONArray jsonArgumentArray = (JSONArray)jsonObject.get("args");
 

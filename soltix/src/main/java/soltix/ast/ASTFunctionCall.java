@@ -167,4 +167,10 @@ public class ASTFunctionCall extends ASTNode {
         this.interpretationFunctionDefinition = interpretationFunctionDefinition;
     }
     private ASTFunctionDefinition interpretationFunctionDefinition;
+
+    public ASTStructDefinition getInterpretationStructDefinition() { return interpretationStructDefinition; }
+    public void setInterpretationStructDefinition(ASTStructDefinition interpretationStructDefinition) {
+        this.interpretationStructDefinition = interpretationStructDefinition;
+    }
+    private ASTStructDefinition interpretationStructDefinition;
 }

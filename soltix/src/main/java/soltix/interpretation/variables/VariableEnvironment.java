@@ -22,6 +22,7 @@ package soltix.interpretation.variables;
 import soltix.Configuration;
 import soltix.ast.AST;
 import soltix.ast.ASTContractDefinition;
+import soltix.ast.ASTElementaryTypeName;
 import soltix.interpretation.Type;
 import soltix.interpretation.expressions.Expression;
 import soltix.util.JSONValueConverter;
@@ -161,6 +162,19 @@ public class VariableEnvironment {
         } else if (values.getValueCount() > 0
                 && values.getValue(0).getType() == null) {
             throw new Exception("Value type for variable " + var.getName() + " is null");
+        }
+
+        // Ad-hoc handling of untyped integer constants, e.g. in
+        //     T v = 123;
+        // constant 123 is presumed to be a 256 integer until the assignment to v may require a more restrictive
+        // type.
+        // TODO This is only done here for now to fix a test case, but realistically operands to the binary and
+        // ternary operators, as well as function arguments and return values probably have to be treated the same.
+        if (values.getValue(0) != null
+            && Type.isIntegerType(values.getValue(0).getType())
+            && ((IntegerValue)values.getValue(0)).getIsIndeterminateType()) {
+            Value convertedValue = ((IntegerValue)((IntegerValue) values.getValue(0)).convertToIntegerType((ASTElementaryTypeName)var.getType()));
+            values.updateValue(0, convertedValue);
         }
 
         if (values.getValueCount() > 0

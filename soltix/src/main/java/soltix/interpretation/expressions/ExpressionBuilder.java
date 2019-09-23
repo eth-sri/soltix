@@ -59,7 +59,7 @@ public class ExpressionBuilder {
             ASTFunctionCall functionCall = (ASTFunctionCall) astNode;
 
             if (functionCall.getCalled() instanceof ASTElementaryTypeNameExpression) {
-                ASTElementaryTypeNameExpression elementaryTypeNameExpression = (ASTElementaryTypeNameExpression)functionCall.getCalled();
+                ASTElementaryTypeNameExpression elementaryTypeNameExpression = (ASTElementaryTypeNameExpression) functionCall.getCalled();
 
                 // A conversion operation - int8(...)
                 ArrayList<ASTNode> arguments = functionCall.getArguments();
@@ -68,18 +68,24 @@ public class ExpressionBuilder {
                 }
                 Expression toConvert = fromASTNode(ast, contractDefinition, environment, arguments.get(0));
                 result = new Expression(toConvert, elementaryTypeNameExpression.getElementaryTypeName()); // type conversion expression
-            } else {
-                // TODO
-                //   - create ordinary function call expression
-                //   - adapt expression evaluator to call back to interpreter for stack frame creation etc
-                //   - embed return value in expression evaluation
-
+            } else if (functionCall.getCalled() instanceof ASTMemberAccess) {
+                // This may be a structure initializer with canonical name including the contract:
+                //     s0 s = c0.s0(1, 2, 3...);
+                // Or it could be a function call, which is allowed:
+                //     bool b = c0.f();
+                Util.unimpl();
+            } else if (functionCall.getCalled() instanceof ASTIdentifier) {
                 // Look up called function (note: function declarations without body are also ASTFunctionDefinitions)
                 ASTFunctionDefinition functionDefinition = contractDefinition.getFunction(functionCall.getCalled().getName());
                 ASTNode returnType = null;
 
                 if (functionDefinition == null) {
-                    if (functionCall.getCalled().getName().equals("keccak256")) {
+                    ASTStructDefinition structDefinition;
+                    if ((structDefinition = contractDefinition.getStructDefinition(functionCall.getCalled().getName())) != null) {
+                        // Structure value
+                        returnType = structDefinition.getUserDefinedType();
+                        functionCall.setInterpretationStructDefinition(structDefinition);
+                    } else if (functionCall.getCalled().getName().equals("keccak256")) {
                         // Builtin
                         returnType = new ASTElementaryTypeName(0, ASTElementaryTypeName.VARIABLE_LENGTH_BYTES_TYPE_NAME);
                     } else {
@@ -96,6 +102,8 @@ public class ExpressionBuilder {
 
                 Expression callExpression = new Expression(functionCall, arguments, returnType);
                 result = callExpression;
+            } else {
+                throw new Exception("Function call to unsupported item " + functionCall.getCalled().getClass().getName());
             }
         } else if (astNode instanceof  ASTBinaryOperation) {
             ASTBinaryOperation binaryOperation = (ASTBinaryOperation)astNode;

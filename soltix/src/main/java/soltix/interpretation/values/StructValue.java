@@ -26,6 +26,7 @@ import org.json.simple.JSONObject;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * Class to represent structure values
@@ -43,8 +44,18 @@ public class StructValue extends Value {
         this.structType = structType;
         members = new NamedValueList();
     }
+    public StructValue(ASTUserDefinedTypeName type, ASTStructDefinition structType, List<Value> fieldValues) {
+        this(type, structType);
+        for (int i = 0; i < structType.getMembers().size(); ++i) {
+            ASTVariableDeclaration member = structType.getMembers().get(i);
+            Value value = fieldValues.get(i);
+            // TODO type-checking
+            addMember(member, value);
+        }
+    }
 
     // TODO This should probably check consistency with structType
+    // TODO External use of these should probably be prohibited entirely
     public void addMember(ASTVariableDeclaration variable, Value value) { members.addMember(variable, value); }
     public Value getMemberValue(String name) {
         return members.getMemberValue(name);

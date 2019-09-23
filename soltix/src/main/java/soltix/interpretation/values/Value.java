@@ -21,6 +21,7 @@
 package soltix.interpretation.values;
 
 import soltix.ast.*;
+import soltix.interpretation.TypeContainer;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -48,12 +49,21 @@ abstract public class Value {
         if (literal.getSubdenomination() != null) {
             throw new Exception("Value.fromASTNode for unimplemented concept of subdenominations");
         }
+
+        // Create 256-bit-sized integers (signed) for now. Allowing IntegerValue to work out types by itself causes
+        // issues with type size limitations once operations are performed.
+        // Working on 256-bit items until a restriction is needed appears to be more in line with the documentation,
+        // but context-dependent type inference is missing.
         switch (literal.getType()) {
-            case LITERAL_TYPE_INTEGER_DECIMAL: // decimal integral constant - 123
-                value = new IntegerValue(new BigInteger(literal.getValueString()));
+            case LITERAL_TYPE_INTEGER_DECIMAL: // decimal integral constant - e.g. 123
+                value = new IntegerValue(TypeContainer.getIntegerType(true, 256),
+                                         new BigInteger(literal.getValueString()));
+                ((IntegerValue)value).setIsIndeterminateType(true);
                 break;
             case LITERAL_TYPE_INTEGER_HEXADECIMAL: // hexadecimal integral constant - 0x123
-                value = new IntegerValue(new BigInteger(literal.getValueString().replace("0x", ""), 16));
+                value = new IntegerValue(TypeContainer.getIntegerType(true, 256),
+                                         new BigInteger(literal.getValueString().replace("0x", ""), 16));
+                ((IntegerValue)value).setIsIndeterminateType(true);
                 break;
             case LITERAL_TYPE_HEXADECIMAL:     // hexadecimal string constant -  hex"123" (TODO distinction from 0x123 unclear)
                 throw new Exception("Value.fromASTNode for unimplemented literal type " + literal.getType());

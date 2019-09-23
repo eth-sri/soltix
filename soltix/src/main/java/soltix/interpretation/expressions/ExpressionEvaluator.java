@@ -360,16 +360,27 @@ public class ExpressionEvaluator {
                     ArrayList<Value> arguments = evaluateFunctionCallArguments(environment,
                                                                                 VariableEnvironment.NO_VALUE_SET_SELECTED,
                                                                                 expression.getFunctionCallArguments());
-                    ASTFunctionDefinition calledFunction = functionCall.getInterpretationFunctionDefinition();
 
-                    calledFunction.setInterpretationArguments(arguments);
+                    if (functionCall.getInterpretationFunctionDefinition() != null) {
+                        ASTFunctionDefinition calledFunction = functionCall.getInterpretationFunctionDefinition();
+                        calledFunction.setInterpretationArguments(arguments);
 
-                    Value returnValue = interpreter.interpretNode(calledFunction);
-                    resultValues = new ComputedValues();
-                    resultValues.values.add(returnValue);
+                        Value returnValue = interpreter.interpretNode(calledFunction);
+                        resultValues = new ComputedValues();
+                        resultValues.values.add(returnValue); // TODO multi-value?
 
-                    if (returnValue == null) {
-                        throw new Exception("Null return value from interpretation");
+                        if (returnValue == null) {
+                            throw new Exception("Null return value from interpretation");
+                        }
+                    } else if (functionCall.getInterpretationStructDefinition() != null) {
+                        Value structValue =
+                                new StructValue((ASTUserDefinedTypeName)expression.getType(),
+                                                functionCall.getInterpretationStructDefinition(),
+                                        arguments);
+                        resultValues = new ComputedValues();
+                        resultValues.values.add(structValue); // TODO multi-value?
+                    } else {
+                        throw new Exception("Call to unknown function object type in " + functionCall.toSolidityCode());
                     }
                 } else {
                     throw new Exception("Attempt to evaluate unimplemented function " + identifier.getName());

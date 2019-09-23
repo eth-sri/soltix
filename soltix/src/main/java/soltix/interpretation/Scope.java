@@ -133,7 +133,7 @@ public class Scope {
                         variableEnvironment.getAST(),
                         declaration.getTypeName());
             }
-            
+
             VariableValues values = new VariableValues(variable, 0);
             values.addValue(initializer);
             variableEnvironment.addVariableValues(variable, values);

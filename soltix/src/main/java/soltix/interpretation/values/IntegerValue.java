@@ -34,6 +34,7 @@ import java.util.HashMap;
 public class IntegerValue extends Value implements Comparable, IIntegerOperations {
     // AST type representation
     private ASTElementaryTypeName type;
+    private boolean isIndeterminateType = false; // for temporarily untyped 256-bit items
     // ... extracted main type info
     /*private int bits;
     private boolean signed;*/
@@ -69,6 +70,13 @@ public class IntegerValue extends Value implements Comparable, IIntegerOperation
         type = TypeContainer.getIntegerType(true, byteCount*8);
     }
 
+
+    public void setIsIndeterminateType(boolean value) {
+        isIndeterminateType = value;
+    }
+    public boolean getIsIndeterminateType() {
+        return isIndeterminateType;
+    }
 
 
     private IntegerValue(ASTNode type) throws Exception {
