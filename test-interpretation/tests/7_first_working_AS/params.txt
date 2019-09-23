@@ -1,0 +1,6 @@
+1 1 5 5 10 X --assignmentSequence
+prng seed       = 1
+function count  = 1
+min assignments = 5
+max assignments = 5
+variable count  = 10

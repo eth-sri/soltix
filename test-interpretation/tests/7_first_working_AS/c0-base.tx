@@ -1,0 +1,2 @@
+logEvents(await instance.f0("165", "140", "0x0366FD1DF0180E6FB232B7", "0x80F9B1"));
+logEvents(await instance.__outro());
