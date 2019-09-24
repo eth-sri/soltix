@@ -59,7 +59,7 @@ public class StringValue extends Value {
     }
 
     static public String printableCharacterString(char character) {
-	// TODO re-enable or remove distinction, using \u on everything for consistency for now
+	// TODO re-enable or remove distinction, using \\u on everything for consistency for now
         if (false) { //Character.isLetterOrDigit(character)) {
             return String.valueOf((char)character);
         } else {

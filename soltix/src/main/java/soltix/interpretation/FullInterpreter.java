@@ -259,7 +259,8 @@ public class FullInterpreter implements IInterpreterCallback {
             interpretExpressionStatement((ASTExpressionStatement) currentNode);
         } else if (currentNode instanceof ASTLiteral
                 || currentNode instanceof ASTFunctionCall
-                || currentNode instanceof ASTBinaryOperation) {
+                || currentNode instanceof ASTBinaryOperation
+                || currentNode instanceof ASTTupleExpression) {
             returnValue = interpretExpression(currentNode);
         } else {
             throw new Exception("FullInterpreter.interpretNode for unimplemented node type "
@@ -380,14 +381,19 @@ public class FullInterpreter implements IInterpreterCallback {
     }
 
     protected void interpretReturnStatement(ASTReturnStatement returnStatement) throws Exception {
-        // Evaluate argument
-        VariableEnvironment currentVariableEnvironment = currentStackFrame().getScope().getVariableEnvironment();
-        Value result = expressionEvaluator.evaluateForAll(currentVariableEnvironment,
-                            ExpressionBuilder.fromASTNode(ast,
-                                                          currentStackFrame().getContract(),
-                                                          currentVariableEnvironment,
-                                                          returnStatement.getArgument())).values.get(0);
-        currentStackFrame().setReturnValue(result);
+        // Evaluate argument, if any
+        if (returnStatement.getArgument() != null) {
+            VariableEnvironment currentVariableEnvironment = currentStackFrame().getScope().getVariableEnvironment();
+            Value result = expressionEvaluator.evaluateForAll(currentVariableEnvironment,
+                    ExpressionBuilder.fromASTNode(ast,
+                            currentStackFrame().getContract(),
+                            currentVariableEnvironment,
+                            returnStatement.getArgument())).values.get(0);
+
+            currentStackFrame().setReturnValue(result);
+        } else {
+            currentStackFrame().setReturnValue(null);
+        }
     }
 
     protected void interpretIfStatement(ASTIfStatement ifStatement) throws Exception {
@@ -435,8 +441,10 @@ public class FullInterpreter implements IInterpreterCallback {
     }
 
     protected void interpretForStatement(ASTForStatement forStatement) throws Exception {
-        // Interpret initializer part
-        interpretNode(forStatement.getInitPart());
+        if (forStatement.getInitPart() != null) {
+            // Interpret initializer part
+            interpretNode(forStatement.getInitPart());
+        }
 
         for (;;) {
             // Interpret condition

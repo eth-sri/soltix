@@ -93,7 +93,7 @@ public class ASTLiteral extends ASTNode {
                     System.exit(0);
                 }
                 // TODO remove or re-enable escapeString(). Currently we transform every
-                // input string to \u-encoded sequences during data generation or solc input
+                // input string to \\u-encoded sequences during data generation or solc input
                 // processing
                 result += value; //escapeString(value);
                 result += "\"";

@@ -339,7 +339,7 @@ public class ParserASTJSON extends Parser {
                 throw new Exception("String literal without value");
             }
 
-	    // Ensure that all input is printable as ASCII, encoding with \u... where needed
+	        // Ensure that all input is printable as ASCII, encoding with \\u... where needed
             value = StringValue.printableString(value);
         } else if (token.equals("bool")) {
             literalType = ASTLiteral.LiteralType.LITERAL_TYPE_BOOL;
