@@ -1,0 +1,6 @@
+2 10 10 10 10 /home/nweller/soltix/test-interpretation/BIG/_generated --assignmentSequence
+prng seed       = 2
+function count  = 10
+min assignments = 10
+max assignments = 10
+variable count  = 10
