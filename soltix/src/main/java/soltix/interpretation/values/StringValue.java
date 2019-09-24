@@ -58,6 +58,24 @@ public class StringValue extends Value {
         return sb.toString();
     }
 
+    static public String printableCharacterString(char character) {
+	// TODO re-enable or remove distinction, using \u on everything for consistency for now
+        if (false) { //Character.isLetterOrDigit(character)) {
+            return String.valueOf((char)character);
+        } else {
+            return String.format("\\u%04x", (int)(character & 0xff));
+        }
+    }
+
+    static public String printableString(String s) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < s.length(); ++i) {
+            Character c = s.charAt(i);
+            sb.append(printableCharacterString((char)c));
+        }
+        return sb.toString();
+    }
+
     public String getValue() { return value; }
 
     @Override

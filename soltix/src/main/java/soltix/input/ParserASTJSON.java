@@ -33,6 +33,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import soltix.ast.*;
+import soltix.interpretation.values.StringValue;
 
 /**
  * Parser of Solidity code supplied in "--ast-json" solc JSON output format
@@ -322,6 +323,7 @@ public class ParserASTJSON extends Parser {
 
     protected void processLiteral(long id, AST ast, JSONObject attributes) throws Exception {
         String value = (String)attributes.get("value");
+
         String type = (String)attributes.get("type");
         String token = (String)attributes.get("token");
         String subdenomination = (String)attributes.get("subdenomination");
@@ -336,6 +338,9 @@ public class ParserASTJSON extends Parser {
             if (value == null) {
                 throw new Exception("String literal without value");
             }
+
+	    // Ensure that all input is printable as ASCII, encoding with \u... where needed
+            value = StringValue.printableString(value);
         } else if (token.equals("bool")) {
             literalType = ASTLiteral.LiteralType.LITERAL_TYPE_BOOL;
             if (value == null) {
@@ -352,6 +357,7 @@ public class ParserASTJSON extends Parser {
                 throw new Exception("Literal without value attribute");
             }
         }
+
         ast.addInnerNode(new ASTLiteral(id, type, value, literalType, subdenomination));
     }
 

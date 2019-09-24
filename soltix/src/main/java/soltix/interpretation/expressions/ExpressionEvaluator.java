@@ -352,7 +352,13 @@ public class ExpressionEvaluator {
                         }
                     } else {
                         resultValues = new ComputedValues();
-                        resultValues.values.add(evaluateKeccak256ForOne(((StringValue) argumentValues.values.get(0)).getValue().getBytes("UTF-8")));
+
+                        // TODO bytes/string interchangeability is unlikely to be correct - how exactly is it defined?
+                        byte[] data =  argumentValues.values.get(0) instanceof StringValue?
+                                ((StringValue) argumentValues.values.get(0)).getValue().getBytes("UTF-8"):
+                                ((BytesValue) argumentValues.values.get(0)).getValue();
+
+                        resultValues.values.add(evaluateKeccak256ForOne(data));
                     }
                 } else if (interpreter != null) {
                     // This call can be interpreted - first evaluate function arguments
@@ -395,10 +401,15 @@ public class ExpressionEvaluator {
 
             operandValues = evaluate(environment, valueSetIndex, operand, reevaluating);
 
-            resultValues = evaluateCastForAll(operandValues, operand.getType(), targetType);
+            if (Type.isSameType(null/*ast TODO */, operand.getType(), targetType)) {
+                // No-op
+                resultValues = operandValues;
+            } else {
+                resultValues = evaluateCastForAll(operandValues, operand.getType(), targetType);
 
-            if (freeIntermediateResults) {
-                operand.setComputedValues(null);
+                if (freeIntermediateResults) {
+                    operand.setComputedValues(null);
+                }
             }
         } else if (expression.getValue() != null) {
             if (expression.getValue() instanceof Variable) {

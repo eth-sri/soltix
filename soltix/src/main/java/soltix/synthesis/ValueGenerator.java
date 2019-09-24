@@ -157,17 +157,14 @@ public class ValueGenerator {
 
         return result;
     }
+
     protected Value generateRandomStringValue() throws Exception {
         // There's no specified size limit for strings - but we limit ourselves to 255 bytes
         int size = (int)prng.generateLongInteger(0, 255);
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < size; ++i) {
             byte character = generateRandomByte();
-            if (Character.isLetterOrDigit(character)) {
-                sb.append((char)character);
-            } else {
-                sb.append(String.format("\\u%04x", (int)(character & 0xff)));
-            }
+	        sb.append(StringValue.printableCharacterString((char)character));
         }
         return new StringValue(sb.toString());
     }

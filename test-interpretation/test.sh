@@ -17,5 +17,8 @@ if ./interpret.sh "$1" && ./compile-and-run.sh "$1"; then
 		echo DIFF
 		exit 1
 	fi
+else
+	echo INTERPRETATION ERROR
+	exit 1
 fi
 

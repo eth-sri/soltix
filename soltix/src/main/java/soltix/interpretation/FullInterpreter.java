@@ -101,7 +101,7 @@ public class FullInterpreter implements IInterpreterCallback {
         // TODO this currently produces a single huge line, which should be pretty-printed (maybe just use a nodejs
         // script to clean up the produced file)
         for (JSONObject object : emittedEventsJSONObjectList) {
-            file.write(object.toJSONString() + "\n");
+            file.write(object.toJSONString().replace("\\\\", "\\") + "\n"); // undo JSON \-escape
         }
         file.flush();
     }
