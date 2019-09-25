@@ -65,6 +65,16 @@ public class FullInterpreter implements IInterpreterCallback {
             super(text);
         }
     }
+    private class ReturnException extends Exception {
+        private Value returnValue;
+
+        public ReturnException(String text, Value returnValue) {
+            super(text);
+            this.returnValue = returnValue;
+        }
+
+        public Value getReturnValue() { return returnValue; }
+    }
 
     public FullInterpreter(ArrayList<Transaction> transactions) {
         this.transactions = transactions;
@@ -310,7 +320,13 @@ public class FullInterpreter implements IInterpreterCallback {
         body.setCovered(true);
         Value result = interpretChildNodes(body);
         */
-        Value result = interpretNode(functionDefinition.getBody());
+        Value result = null;
+
+        try {
+            interpretNode(functionDefinition.getBody());
+        } catch (ReturnException exception) {
+            result = exception.getReturnValue();
+        }
 
         // Cleanup
         uninitializeLocalFunctionEnvironment(stackFrame, functionDefinition);
@@ -394,6 +410,9 @@ public class FullInterpreter implements IInterpreterCallback {
         } else {
             currentStackFrame().setReturnValue(null);
         }
+        // TODO proper error handling
+        throw new ReturnException("Invalid return statement on line  " + returnStatement.getInputCodeLineNumber(),
+                currentStackFrame().getReturnValue());
     }
 
     protected void interpretIfStatement(ASTIfStatement ifStatement) throws Exception {
