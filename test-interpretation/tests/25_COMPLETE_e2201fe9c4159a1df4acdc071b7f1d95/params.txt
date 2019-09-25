@@ -1,0 +1,6 @@
+81 10 1 10 30 /home/nweller/soltix/test-interpretation/BIG2/_generated --complete
+prng seed       = 81
+function count  = 10
+min assignments = 1
+max assignments = 10
+variable count  = 30
