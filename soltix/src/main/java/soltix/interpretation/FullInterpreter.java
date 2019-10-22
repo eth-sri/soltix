@@ -27,6 +27,7 @@ import soltix.interpretation.expressions.ExpressionBuilder;
 import soltix.interpretation.expressions.ExpressionEvaluationErrorHandler;
 import soltix.interpretation.expressions.ExpressionEvaluator;
 import soltix.interpretation.values.BoolValue;
+import soltix.interpretation.values.ContractValue;
 import soltix.interpretation.values.Value;
 import soltix.interpretation.values.ValueContainer;
 import soltix.interpretation.variables.Variable;
@@ -37,7 +38,6 @@ import soltix.synthesis.ValueGenerator;
 import soltix.util.JSONValueConverter;
 import soltix.util.RandomNumbers;
 import org.json.simple.JSONObject;
-import soltix.util.Util;
 
 import java.io.FileWriter;
 import java.util.ArrayList;
@@ -124,10 +124,10 @@ public class FullInterpreter implements IInterpreterCallback {
     }
 
 
-    private ASTContractDefinition currentContractValueContext = null;
+    private /*ASTContractDefinition*/ContractValue currentContractValueContext = null;
 
     public void run() throws Exception {
-        //initializeGlobalEnvironment(transactions.get(0).getContract()); // TODO multiple contracts?
+        //initializeContractEnvironment(transactions.get(0).getContract()); // TODO multiple contracts?
         createGlobalEnvironment(); // TODO multiple contracts?
 
 
@@ -136,6 +136,7 @@ public class FullInterpreter implements IInterpreterCallback {
             throw new Exception("Empty transactions list");
         }
 
+        /*
         // TODO unify with ContractValue
         ASTContractDefinition contractContext = transactions.get(0).getContract();
         currentContractValueContext = contractContext;
@@ -145,9 +146,11 @@ public class FullInterpreter implements IInterpreterCallback {
             // An unpleasant example that requires variable processing is:
             //    int x = 5;
             //    int y = x;
-            initializeGlobalEnvironment(contractContext);
+            initializeContractEnvironment(contractContext);
             initializedGlobalEnvironment = true;
-        }
+        }*/
+        currentContractValueContext = interpretNewExpression(transactions.get(0).getContract()/*TODO*/,
+                                                        new ArrayList<Value>() /* TODO */);
 
 
 
@@ -157,7 +160,8 @@ public class FullInterpreter implements IInterpreterCallback {
             Value result = interpretTransaction(transaction);
             // TODO use result
         }
-        globalEnvironment = null;
+        //globalEnvironment = null;
+        globalInterpreterEnvironment = null;
     }
 
 
@@ -183,16 +187,18 @@ public class FullInterpreter implements IInterpreterCallback {
 
 
 
-    private VariableEnvironment globalEnvironment;
-    private boolean initializedGlobalEnvironment = false;
+    private VariableEnvironment globalInterpreterEnvironment;
+   // private boolean initializedGlobalEnvironment = false;
+
 
     protected void createGlobalEnvironment() throws Exception {
         // Prepare variable environment, which will hold a single, continuously updated value set while synthesizing
         // expressions
-        globalEnvironment = new VariableEnvironment(ast, true);
+        globalInterpreterEnvironment = new VariableEnvironment(ast, true);
     }
 
-    protected void initializeGlobalEnvironment(ASTContractDefinition currentContract) throws Exception {
+    protected void initializeContractEnvironment(VariableEnvironment environment,
+                                                 ASTContractDefinition currentContract) throws Exception {
         // Generate storage variables
         for (ASTNode tmp : currentContract.getVariables()) {
             ASTVariableDeclaration variableDeclaration = (ASTVariableDeclaration)tmp;
@@ -220,7 +226,7 @@ public class FullInterpreter implements IInterpreterCallback {
             }
 
             variableValues.addValue(initializerValue);
-            globalEnvironment.addVariableValues(variable, variableValues);
+            environment.addVariableValues(variable, variableValues);
         }
     }
 
@@ -249,6 +255,36 @@ public class FullInterpreter implements IInterpreterCallback {
             stackFrame.getScope().leaveNode(parameter);
         }
     }
+
+
+
+    public ContractValue interpretNewExpression(ASTContractDefinition contractType,
+                                                ArrayList<Value> arguments) throws Exception {
+        ContractValue value = new ContractValue(contractType);
+
+        currentContractValueContext = value; // assign here to resolve another circular reference when evaluating
+                                             // initializers. TODO fix this, maybe pass proper context objects where needed
+
+        VariableEnvironment environment = new VariableEnvironment(ast, true);
+        //if (!initializedGlobalEnvironment) {
+            // Due to expression evaluation for initializers requiring a variable environment and potentially other
+            // stack frame elements, we initialize storage variables at the first function call.
+            // An unpleasant example that requires variable processing is:
+            //    int x = 5;
+            //    int y = x;
+
+        value.setInterpretationEnvironment(environment); // Again, already set this due to circular references in initializeContractEnvironment(). TODO Fix this
+
+
+
+        // TODO remove all "global" things, associate them with ContractValues; call constructor with args
+            initializeContractEnvironment(environment, contractType);
+        //    initializedGlobalEnvironment = true;
+       // }
+
+        return value;
+    }
+
 
 
     public Value interpretNode(ASTNode currentNode) throws Exception {
@@ -294,12 +330,13 @@ public class FullInterpreter implements IInterpreterCallback {
             interpretContinueStatement((ASTContinueStatement) currentNode);
         } else if (currentNode instanceof ASTExpressionStatement) {
             interpretExpressionStatement((ASTExpressionStatement) currentNode);
-        } else if (currentNode instanceof ASTNewExpression) {
-            interpetNewExpression((ASTNewExpression)currentNode);
+        //} else if (currentNode instanceof ASTNewExpression) {
+            //returnValue = interpretNewExpression((ASTNewExpression)currentNode);
         } else if (currentNode instanceof ASTLiteral
                 || currentNode instanceof ASTFunctionCall
                 || currentNode instanceof ASTBinaryOperation
-                || currentNode instanceof ASTTupleExpression) {
+                || currentNode instanceof ASTTupleExpression
+                || currentNode instanceof ASTNewExpression) {
             returnValue = interpretExpression(currentNode);
         } else {
             throw new Exception("FullInterpreter.interpretNode for unimplemented node type "
@@ -322,7 +359,7 @@ public class FullInterpreter implements IInterpreterCallback {
         // Set up stack frame
         SolidityStackFrame stackFrame = new SolidityStackFrame(functionDefinition.getContract(),
                 functionDefinition,
-                globalEnvironment, // global env is always the fallback, otherwise we would run into local vars clashes
+                currentContractValueContext.getInterpretationEnvironment(), /*TODO*/    /*globalEnvironment,*/ // global env is always the fallback, otherwise we would run into local vars clashes
                 this,
                 arguments,
                 ast);
@@ -340,7 +377,7 @@ public class FullInterpreter implements IInterpreterCallback {
             // An unpleasant example that requires variable processing is:
             //    int x = 5;
             //    int y = x;
-            initializeGlobalEnvironment(functionDefinition.getContract());
+            initializeContractEnvironment(functionDefinition.getContract());
             initializedGlobalEnvironment = true;
         }*/
 
@@ -417,10 +454,11 @@ public class FullInterpreter implements IInterpreterCallback {
     protected Value interpretExpression(ASTNode node) throws Exception {
         // There may be no stack frame when we're evaluating things while initializing a contract object
         // TODO store globalEnvironment in ContractValue, retrieve it from there
+
         VariableEnvironment currentVariableEnvironment =
-                currentStackFrame() != null? currentStackFrame().getScope().getVariableEnvironment(): globalEnvironment;
+                currentStackFrame() != null? currentStackFrame().getScope().getVariableEnvironment(): currentContractValueContext.getInterpretationEnvironment() /*TODO*/; // globalEnvironment;
         ASTContractDefinition currentContract =
-                currentStackFrame() != null? currentStackFrame().getContract(): currentContractValueContext;
+                currentStackFrame() != null? currentStackFrame().getContract(): currentContractValueContext.getContractDefinition();
 
 
         Expression expression = ExpressionBuilder.fromASTNode(ast,
@@ -566,9 +604,5 @@ public class FullInterpreter implements IInterpreterCallback {
     protected void interpretContinueStatement(ASTContinueStatement breakStatement) throws Exception {
         // Outer loops catch the exception or we'll error out. TODO proper error handling
         throw new ContinueException("Invalid continue statement on line  " + breakStatement.getInputCodeLineNumber());
-    }
-
-    protected void interpetNewExpression(ASTNewExpression newExpression) {
-
     }
 }

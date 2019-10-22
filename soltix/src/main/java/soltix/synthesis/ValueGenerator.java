@@ -253,7 +253,7 @@ public class ValueGenerator {
                     throw new Exception("Unknown user-defined type " + type.getName());
                 }
 
-                ContractValue contractValue = new ContractValue(contractDefinition, null);
+                ContractValue contractValue = new ContractValue(contractDefinition);
                 NamedValueList valueList = contractValue.getConstructorValueList();
                 ASTFunctionDefinition constructor  = contractDefinition.getConstructor();
                 if (constructor != null) {

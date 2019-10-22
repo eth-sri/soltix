@@ -24,6 +24,8 @@ import soltix.ast.ASTContractDefinition;
 import soltix.ast.ASTNode;
 import soltix.ast.ASTVariableDeclaration;
 import soltix.ast.ASTVerbatimText;
+import soltix.interpretation.variables.Variable;
+import soltix.interpretation.variables.VariableEnvironment;
 
 import java.util.ArrayList;
 
@@ -35,8 +37,7 @@ public class ContractValue extends Value {
     private NamedValueList members;
     private NamedValueList constructorArguments;
 
-    public ContractValue(ASTContractDefinition contractType,
-                         ArrayList<Value> arguments) {
+    public ContractValue(ASTContractDefinition contractType) {
 
         this.contractType = contractType;
         members = new NamedValueList();
@@ -51,6 +52,7 @@ public class ContractValue extends Value {
             addMember(member, value);
         }*/
     }
+
 
     public void addMember(ASTVariableDeclaration variable, Value value) { members.addMember(variable, value); }
     public Value getMemberValue(String name) {
@@ -67,6 +69,8 @@ public class ContractValue extends Value {
     @Override
     public ASTNode getType() { return contractType; }
 
+    public ASTContractDefinition getContractDefinition() { return contractType; } // TODO UDT vs ContractDefinition?
+
     @Override
     public ASTNode toASTNode(boolean forJavaScript) throws Exception {
         return members.genericToASTNode(contractType, forJavaScript);
@@ -75,5 +79,14 @@ public class ContractValue extends Value {
     @Override
     public Object toJSONRepresentation() throws Exception {
         throw new Exception("ContractValue.toJSONRepresentation is unimplemented");
+    }
+
+    // Interpretation-related values
+    private VariableEnvironment interpretationEnvironment;
+    public void setInterpretationEnvironment(VariableEnvironment environment) {
+        interpretationEnvironment = environment;
+    }
+    public VariableEnvironment getInterpretationEnvironment() {
+        return interpretationEnvironment;
     }
 }

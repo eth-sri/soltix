@@ -525,7 +525,7 @@ public class ExpressionEvaluator {
                 ArrayList<Value> arguments = evaluateFunctionCallArguments(environment,
                         VariableEnvironment.NO_VALUE_SET_SELECTED,
                         expression.getFunctionCallArguments());
-                ContractValue contractValue = new ContractValue(expression.getNewContract(), arguments);
+                ContractValue contractValue = interpreter.interpretNewExpression(expression.getNewContract(), arguments);  //new ContractValue(expression.getNewContract(), arguments);
                 resultValues = new ComputedValues();
                 resultValues.values.add(contractValue);
             } else {
