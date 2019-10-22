@@ -26,6 +26,7 @@ import soltix.interpretation.Type;
 import soltix.interpretation.TypeContainer;
 import soltix.interpretation.values.*;
 import soltix.util.RandomNumbers;
+import soltix.util.Util;
 
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -252,7 +253,7 @@ public class ValueGenerator {
                     throw new Exception("Unknown user-defined type " + type.getName());
                 }
 
-                ContractValue contractValue = new ContractValue(contractDefinition);
+                ContractValue contractValue = new ContractValue(contractDefinition, null);
                 NamedValueList valueList = contractValue.getConstructorValueList();
                 ASTFunctionDefinition constructor  = contractDefinition.getConstructor();
                 if (constructor != null) {
@@ -268,6 +269,9 @@ public class ValueGenerator {
                 // See, for struct contract fields:
                 // ./run-one-test.sh ~/securify-contracts/0174d4582cca163501d219def808fd4f9a126dd0bf0f7d224020c7d83d585dc5/contract.sol
                 //  throw new Exception("Unsupported UDT value generation");
+
+
+                Util.unimpl();
                 return contractValue;
             }
         }

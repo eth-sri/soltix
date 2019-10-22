@@ -482,7 +482,23 @@ public class Driver {
     }
 
     protected boolean reduceFunctions(AST ast, ASTEditor editor, RandomNumbers prng) {
-        for (String requestedRemoval : Configuration.reduceFunctions) {
+        ArrayList<String> reduceFunctions;
+
+        if (Configuration.reduceFunctions != null
+                && Configuration.reduceFunctions.size() == 1
+                && Configuration.reduceFunctions.get(0).equals("all")) {
+            reduceFunctions = new ArrayList<String>();
+            for (ASTContractDefinition contract : ast.getContracts()) {
+                for (ASTFunctionDefinition function : contract.getFunctions()) {
+                    String reduceFunction = contract.getName() + ":" + function.getName();
+                    reduceFunctions.add(reduceFunction);
+                }
+            }
+        } else {
+            reduceFunctions = Configuration.reduceFunctions;
+        }
+
+        for (String requestedRemoval : reduceFunctions) {
             // Assume format "<contract>:<function>"
             String[] s = requestedRemoval.split(":");
             ASTContractDefinition contract = ast.getContract(s[0]);

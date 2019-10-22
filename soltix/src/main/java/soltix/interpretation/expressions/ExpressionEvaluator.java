@@ -503,8 +503,8 @@ public class ExpressionEvaluator {
             // Evaluate LHS operand
             // TODO this needs to be done at the latest once we have arrays so the LHS may contain side effects. a[i++] = x; ...
             // Constructs like "f().x = y;" - with f() returning a contract reference - are rejected due to lvalue errors
-       //     ComputedValues firstOperandValues;
-       //     firstOperandValues = evaluate(environment, valueSetIndex, expression.getFirstOperand(), reevaluating);
+            //     ComputedValues firstOperandValues;
+            //     firstOperandValues = evaluate(environment, valueSetIndex, expression.getFirstOperand(), reevaluating);
 
             // Adapt RHS operand to include a conversion operation to the LHS operand's type
             Expression convertedRHS = new Expression(expression.getSecondOperand(), expression.getFirstOperand().getType());
@@ -519,6 +519,18 @@ public class ExpressionEvaluator {
                 environment.updateVariableValueIncludingParentEnvironments(/*variable*/expression.getFirstOperand(), value); // TODO multi-item computations?
             }
             resultValues = secondOperandValues;
+        } else if (expression.getNewContract() != null) {
+            if (interpreter != null) {
+                // This contract construction call can be interpreted - first evaluate constructor arguments
+                ArrayList<Value> arguments = evaluateFunctionCallArguments(environment,
+                        VariableEnvironment.NO_VALUE_SET_SELECTED,
+                        expression.getFunctionCallArguments());
+                ContractValue contractValue = new ContractValue(expression.getNewContract(), arguments);
+                resultValues = new ComputedValues();
+                resultValues.values.add(contractValue);
+            } else {
+                throw new Exception("Evaluating 'new' expression without interpreter");
+            }
         } else {
             throw new Exception("ExpressionEvaluator.evaluate received malformed Expression");
         }

@@ -29,6 +29,10 @@ public class ASTNewExpression extends ASTNode {
     @Override
     public String toSolidityCodePostfix() { return null; }
 
+    public ASTNode getTypeName() {
+        return typeName;
+    }
+
     @Override
     public void finalize() throws Exception {
         if (getChildCount() != 1) {

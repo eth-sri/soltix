@@ -63,6 +63,7 @@ public class Expression {
     private ASTNode castExpressionType = null; // Cast-to type
     private ArrayList<Expression> functionCallArguments = null; // ... function call arguments
     private ArrayList<Expression> tupleComponents = null; // Tuple expression components
+    private ASTContractDefinition newContract = null; // "new" contract construction expression
 
     // Operator operands - non-null if used
     private Expression firstOperand = null;
@@ -192,6 +193,7 @@ public class Expression {
     public ArrayList<Expression> getFunctionCallArguments() { return functionCallArguments; }
     public ArrayList<Expression> getTupleComponents() { return tupleComponents; }
     public ASTAssignment.Operator getAssignmentOperator() { return assignmentOperator; }
+    public ASTContractDefinition getNewContract() { return newContract; }
 
     public /*ArrayList<Value>*/ExpressionEvaluator.ComputedValues getComputedValues() { return computedValues; }
     public void setComputedValues(/*ArrayList<Value>*/ExpressionEvaluator.ComputedValues computedValues) { this.computedValues = computedValues; }
@@ -354,6 +356,11 @@ public class Expression {
         this.tupleComponents = tupleComponents;
         this.type = tupleType; // In this case, the type is an ASTTupleExpression, and type.getTypeList() retrieves
                                // the components' individual types
+    }
+
+    public Expression(ASTContractDefinition newContract, ArrayList<Expression> arguments) {
+        this.newContract = newContract;
+        this.functionCallArguments = arguments;
     }
 
     public ASTNode toASTNode() throws Exception {

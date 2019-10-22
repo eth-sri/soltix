@@ -26,6 +26,7 @@ import soltix.synthesis.FunctionGenerator;
 import soltix.util.RandomNumbers;
 
 import java.io.PrintWriter;
+import java.util.ArrayList;
 
 /**
  * Configuration options for hardcoded as well as command-line-controllable settings.
@@ -43,7 +44,7 @@ public class Configuration {
     static public boolean profiling = false;
     static public boolean showCoverage = false;
     static public String loadProfilingLog = null;
-    static public String[] reduceFunctions = null;
+    static public ArrayList<String> reduceFunctions = null;
     static public String generateTruffleConstructorInvocationContract = null;
     static public String generateTruffleConstructorInvocationFile = null;
     static public String generateTruffleTransactionContract = null;

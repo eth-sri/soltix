@@ -90,7 +90,10 @@ public class Main {
                 // Assumed format:
                 //    --reduceFunctions=<contract>:<function>,<contract>:<function>, ...
                 String[] s2 = s[1].split(",");
-                Configuration.reduceFunctions = s2;
+                Configuration.reduceFunctions = new ArrayList<String>();
+                for (String s3 : s2) {
+                    Configuration.reduceFunctions.add(s3);
+                }
             } else if (args[i].startsWith("--generateFullContract")) {
                 String[] s = args[i].split("=");
 

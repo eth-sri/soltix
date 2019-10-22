@@ -25,6 +25,8 @@ import soltix.ast.ASTNode;
 import soltix.ast.ASTVariableDeclaration;
 import soltix.ast.ASTVerbatimText;
 
+import java.util.ArrayList;
+
 /**
  * Class to represent contract values
  */
@@ -33,11 +35,21 @@ public class ContractValue extends Value {
     private NamedValueList members;
     private NamedValueList constructorArguments;
 
-    public ContractValue(ASTContractDefinition contractType) {
+    public ContractValue(ASTContractDefinition contractType,
+                         ArrayList<Value> arguments) {
+
         this.contractType = contractType;
         members = new NamedValueList();
         constructorArguments = new NamedValueList();
         // TODO for attributes with existing initializers, evaluate those and assign the values (addMember())
+
+
+        /*        for (int i = 0; i < structType.getMembers().size(); ++i) {
+            ASTVariableDeclaration member = structType.getMembers().get(i);
+            Value value = fieldValues.get(i);
+            // TODO type-checking
+            addMember(member, value);
+        }*/
     }
 
     public void addMember(ASTVariableDeclaration variable, Value value) { members.addMember(variable, value); }
