@@ -37,6 +37,7 @@ public class ASTContractDefinition extends ASTNode implements Comparable {
     //private ArrayList<ASTModifierDefinition> modifierDefinitions = new ArrayList<ASTModifierDefinition>();
     private HashMap<String, ASTModifierDefinition> modifierDefinitions = new HashMap<String, ASTModifierDefinition>();
     private ArrayList<ASTNode> variables = new ArrayList<ASTNode>();
+    private HashMap<String, ASTNode> variablesByName = new HashMap<String, ASTNode>();
 
     private HashMap<String, ASTStructDefinition> structDefinitionsByName = new HashMap<String, ASTStructDefinition>();
     // Canonical struct references are shared across all contracts since they can be referenced from anywhere
@@ -195,6 +196,25 @@ public class ASTContractDefinition extends ASTNode implements Comparable {
 
     public ArrayList<ASTNode> getVariables() { return variables; }
 
+    public ASTVariableDeclaration lookupVariableDeclaration(String name) {
+        ASTNode result = variablesByName.get(name);
+        if (result == null) {
+            return null;
+        }
+        return result instanceof ASTVariableDeclarationStatement?
+                ((ASTVariableDeclarationStatement)result).getDeclaration():
+                (ASTVariableDeclaration)result;
+    }
+
+    public ASTNode lookupVariableOrFunctionDeclaration(String name) {
+        ASTNode result = lookupVariableDeclaration(name);
+        if (result != null) {
+            return result;
+        }
+        result = getFunction(name);
+        return result;
+    }
+
     public void addInheritedBy(ASTContractDefinition contract) {
         if (inheritedBy == null) {
             inheritedBy = new ArrayList<ASTContractDefinition>();
@@ -269,6 +289,7 @@ public class ASTContractDefinition extends ASTNode implements Comparable {
             } else if (getChild(i) instanceof ASTVariableDeclaration
                     || getChild(i) instanceof ASTVariableDeclarationStatement) {
                 variables.add(getChild(i));
+                variablesByName.put(getChild(i).getName(), getChild(i));
             } else if (getChild(i) instanceof ASTModifierDefinition) {
                 ASTModifierDefinition definition = (ASTModifierDefinition)getChild(i);
                 modifierDefinitions.put(definition.getName(), definition);

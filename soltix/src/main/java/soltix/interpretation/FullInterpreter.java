@@ -282,6 +282,12 @@ public class FullInterpreter implements IInterpreterCallback {
         //    initializedGlobalEnvironment = true;
        // }
 
+        // Call constructor, if any
+        ASTFunctionDefinition constructor = contractType.getConstructor();
+        if (constructor != null) {
+            constructor.setInterpretationArguments(arguments);
+            interpretNode(constructor);
+        }
         return value;
     }
 

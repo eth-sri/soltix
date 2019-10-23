@@ -58,8 +58,10 @@ public class Expression {
     private ASTUnaryOperation.Operator unaryOperator = null; // Unary computation
     private boolean conditionalOperator = false;  // Conditional operator
     private ASTVariableDeclaration memberAccess = null;  // Struct member access
+    private ASTNode contractMemberAccess = null; // Contract member access
     private Expression indexAccess = null; // Array or mapping index access (ASTIndexAccess isn't really useful here)
-    private ASTFunctionCall functionCall = null; // Function call
+    private ASTFunctionCall functionCall = null; // Function call by name
+    private Expression functionCallExpression = null; // Function call by expression
     private ASTNode castExpressionType = null; // Cast-to type
     private ArrayList<Expression> functionCallArguments = null; // ... function call arguments
     private ArrayList<Expression> tupleComponents = null; // Tuple expression components
@@ -187,8 +189,10 @@ public class Expression {
 
     public boolean getConditionalOperator() { return conditionalOperator; }
     public ASTVariableDeclaration getMemberAccess() { return memberAccess; }
+    public ASTNode getContractMemberAccess() { return contractMemberAccess; }
     public Expression getIndexAccess() { return indexAccess; }
     public ASTFunctionCall getFunctionCall() { return functionCall; }
+    public Expression getFunctionCallExpression() { return functionCallExpression; }
     public ASTNode getCastExpressionType() { return castExpressionType; }
     public ArrayList<Expression> getFunctionCallArguments() { return functionCallArguments; }
     public ArrayList<Expression> getTupleComponents() { return tupleComponents; }
@@ -275,10 +279,20 @@ public class Expression {
         containsExpressionAlias = operand.containsExpressionAlias;
     }
 
+    // Member access on structs
     public Expression(Expression operand, ASTVariableDeclaration memberAccess) {
         this.firstOperand = operand;
         this.memberAccess = memberAccess;
         this.type = memberAccess.getTypeName();
+        debugPrefixCode = operand.getDebugPrefixCode();
+        containsExpressionAlias = operand.containsExpressionAlias;
+    }
+
+    // Member access on contract
+    public Expression(Expression operand, ASTNode memberAccess, ASTNode type) {
+        this.firstOperand = operand;
+        this.contractMemberAccess = memberAccess;
+        this.type = type;
         debugPrefixCode = operand.getDebugPrefixCode();
         containsExpressionAlias = operand.containsExpressionAlias;
     }
@@ -295,6 +309,7 @@ public class Expression {
         containsExpressionAlias = operand.containsExpressionAlias;
     }
 
+    // Call to a function designated by an identifier
     public Expression(ASTFunctionCall functionCall, ArrayList<Expression> arguments, ASTNode returnType) throws Exception {
         this.functionCall = functionCall;
         this.functionCallArguments = arguments;
@@ -305,6 +320,13 @@ public class Expression {
                 break;
             }
         }
+    }
+
+    // Call to a function designated by an expression of type function
+    public Expression(Expression calledExpression, ArrayList<Expression> arguments, ASTNode returnType) {
+        this.functionCallExpression = calledExpression;
+        this.functionCallArguments = arguments;
+        this.type = returnType;
     }
 
     // Special call expression:

@@ -36,6 +36,7 @@ public class ASTFunctionDefinition extends FunctionScope {
     //ASTParameterList parameterList = null;
     private ArrayList<ASTModifierInvocation> modifierInvocations = null;
     private SpecialFunction specialFunction = null;
+    private ASTFunctionTypeName functionType; // type of function in a value context
 
     public enum SpecialFunction {
         SPECIAL_FUNCTION_ANNOTATE("__annotate");
@@ -77,6 +78,10 @@ public class ASTFunctionDefinition extends FunctionScope {
         this.isConstructor = isConstructor;
         this.isConstant = isConstant;
         this.specialFunction = SpecialFunction.fromString(name);
+    }
+
+    public ASTNode getFunctionType() {
+        return functionType;
     }
 
     public SpecialFunction isSpecialFunction() { return specialFunction; }
@@ -203,6 +208,7 @@ public class ASTFunctionDefinition extends FunctionScope {
         // Remove parameter lists, keep block child node
         parameters = (ASTParameterList)getChild(0);
         returnList = (ASTParameterList)getChild(1);
+        ASTParameterList savedReturnList = returnList; // TODO
         if (returnList.getChildCount() == 0) {
             // Empty return list - remove it
             returnList = null;
@@ -227,6 +233,12 @@ public class ASTFunctionDefinition extends FunctionScope {
             // Note: The child node is still kept for output
             body = (ASTBlock)getChild(0);
         }
+
+
+        this.functionType = new ASTFunctionTypeName(0,  this.visibility.toString());
+        this.functionType.addChildNode(parameters);
+        this.functionType.addChildNode(savedReturnList);
+        this.functionType.finalize();
     }
 
 

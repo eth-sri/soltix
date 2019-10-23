@@ -71,6 +71,11 @@ public class Type {
                 ast.getStructDefinition(type.getName()): null;
     }
 
+    public static ASTContractDefinition getContractType(AST ast, ASTNode type) {
+        return type instanceof ASTUserDefinedTypeName?
+                ast.getContract(type.getName()): null;
+    }
+
     public static boolean isContractType(AST ast, ASTNode type) {
         return type instanceof ASTUserDefinedTypeName
             && ast.getContract(type.getName()) != null;
@@ -121,6 +126,10 @@ public class Type {
             throw new Exception("Type.isSameType is not defined for arrays");
         } else if (firstType instanceof ASTMapping) {
             throw new Exception("Type.isSameType is not defined for mappings");
+        } else if (firstType instanceof ASTFunctionTypeName && secondType instanceof ASTFunctionTypeName) {
+            ASTFunctionTypeName firstFunctionType = (ASTFunctionTypeName)firstType;
+            ASTFunctionTypeName secondFunctionType = (ASTFunctionTypeName)secondType;
+            return firstFunctionType.toSolidityCode().equals(secondFunctionType.toSolidityCode()); // TODO proper comparison
         } else {
             if (firstType instanceof ASTUserDefinedTypeName && secondType instanceof ASTUserDefinedTypeName) {
                 ASTStructDefinition firstStruct = ast.getStructDefinition(firstType.getName());

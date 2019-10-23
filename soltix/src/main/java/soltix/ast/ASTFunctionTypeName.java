@@ -21,14 +21,18 @@ package soltix.ast;
 
 public class ASTFunctionTypeName extends ASTNode {
     private String visibility = null;
-    ASTNode parameterList = null;
-    ASTNode returnList = null;
+    private ASTNode parameterList = null;
+    private ASTNode returnList = null;
     //ASTNode modifierInvocation = null;
+    private ASTNode returnType = null;
 
     public ASTFunctionTypeName(long id, String visibility) throws Exception {
         super(id);
         this.visibility = visibility;
     }
+
+    public ASTNode getReturnType() { return returnType; }
+
     @Override
     public String toSolidityCode() throws Exception {
         String code = "function(" + parameterList.toSolidityCode() + ") " + visibility;
@@ -54,11 +58,18 @@ public class ASTFunctionTypeName extends ASTNode {
         // Remove parameter lists, keep block child node
         parameterList = getChild(0);
         returnList = getChild(1);
+        ASTNode savedReturnList = returnList; // TODO consistency
         if (returnList.getChildCount() == 0) {
             // Empty return list - remove it
             returnList = null;
         }
         removeChildNode(0);
         removeChildNode(0);
+
+
+        if (savedReturnList.getChildCount() > 0) {
+            returnType = savedReturnList.getChild(0);
+            // TODO tuple types - returnList.getChildCount() > 1
+        }
     }
 }

@@ -21,6 +21,7 @@
 package soltix.interpretation.expressions;
 
 import com.sun.org.apache.xml.internal.utils.UnImplNode;
+import jdk.nashorn.internal.objects.annotations.Function;
 import soltix.ast.*;
 import soltix.interpretation.FullInterpreter;
 import soltix.interpretation.Type;
@@ -318,6 +319,14 @@ public class ExpressionEvaluator {
             if (freeIntermediateResults) {
                 expression.getFirstOperand().setComputedValues(null);
             }
+        } else if (expression.getContractMemberAccess() != null) {
+            ComputedValues operandValues;
+            operandValues = evaluate(environment, valueSetIndex, expression.getFirstOperand(), reevaluating);
+            resultValues = evaluateContractMemberAccessForAll(environment, operandValues, expression.getContractMemberAccess());
+
+            if (freeIntermediateResults) {
+                expression.getFirstOperand().setComputedValues(null);
+            }
         } else if (expression.getIndexAccess() != null) {
             ComputedValues operandValues;
             ComputedValues indexValues;
@@ -332,7 +341,34 @@ public class ExpressionEvaluator {
                 expression.getFirstOperand().setComputedValues(null);
                 expression.getIndexAccess().setComputedValues(null);
             }
-        } else if (expression.getFunctionCall() != null) {
+        } else if (expression.getFunctionCallExpression() != null) {
+            // Evaluate called-to expression
+            ComputedValues values = evaluate(environment, valueSetIndex, expression.getFunctionCallExpression(), reevaluating);
+            if (interpreter == null) {
+                throw new Exception("ExpressionEvaluator function call expression without interpreter");
+            }
+            if (!(values.values.get(0).getType() instanceof ASTFunctionTypeName)) {
+                throw new Exception("Expression " + expression.getFunctionCallExpression().toASTNode().toSolidityCode()
+                        + " returned unexpected non-function value of type " + values.values.get(0).getType().toSolidityCode());
+            }
+            FunctionValue functionValue = (FunctionValue)values.values.get(0);
+
+            ArrayList<Value> arguments = evaluateFunctionCallArguments(environment,
+                    VariableEnvironment.NO_VALUE_SET_SELECTED,
+                    expression.getFunctionCallArguments());
+
+            ASTFunctionDefinition calledFunction = functionValue.getFunctionDefinition();
+            calledFunction.setInterpretationArguments(arguments);
+
+            Value returnValue = interpreter.interpretNode(calledFunction);
+            resultValues = new ComputedValues();
+            resultValues.values.add(returnValue); // TODO multi-value?
+
+            if (returnValue == null) {
+                throw new Exception("Null return value from interpretation");
+            }
+
+        } else if (expression.getFunctionCall() != null) { // Function call by name (note getFunctionCallExpression() case above)
             ASTFunctionCall functionCall = expression.getFunctionCall();
             ASTNode called = functionCall.getCalled();
 
@@ -682,6 +718,39 @@ public class ExpressionEvaluator {
         }
         return result;
     }
+
+
+    protected ComputedValues evaluateContractMemberAccessForAll(VariableEnvironment environment,
+                                                                ComputedValues operandValues,
+                                                                ASTNode memberItem) throws Exception {
+        ComputedValues result = new ComputedValues();
+        for (Value value : operandValues.values) {
+            if (!(value.getType() instanceof ASTContractDefinition)) { // TODO UDT/isContractType() would be expected, but is contract definition - streamline
+                throw new Exception("Invalid member access to non-contract value");
+            }
+
+            if (memberItem instanceof ASTFunctionDefinition) {
+                ASTFunctionDefinition functionDefinition = (ASTFunctionDefinition)memberItem;
+                FunctionValue functionValue = new FunctionValue((ASTContractDefinition)value.getType(),
+                                                                (ASTFunctionDefinition)memberItem,
+                                                                functionDefinition.getFunctionType());
+                result.values.add(functionValue);
+            } else if (memberItem instanceof ASTVariableDeclaration) {
+                ContractValue contractValue = (ContractValue)value;
+                VariableEnvironment contractEnvironment = contractValue.getInterpretationEnvironment(); // TODO may not always be set properly?
+                Variable variableValue = contractEnvironment.getVariable(memberItem.getName());
+                if (variableValue == null) {
+                    throw new Exception("evaluateContractMemberAccessForAll: Cannot locate variable " + memberItem.getName());
+                }
+                result.values.add(variableValue); // TODO properly preserve lvalue property, if not done already, to ensure proper modifications to correct environment
+            } else {
+                Util.unimpl();
+            }
+        }
+        return result;
+    }
+
+
 
     protected ComputedValues evaluateIndexAccessForAll(ComputedValues operandValues,
                                                        ComputedValues indexValues,

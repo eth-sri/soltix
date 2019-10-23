@@ -68,12 +68,23 @@ public class ExpressionBuilder {
                 }
                 Expression toConvert = fromASTNode(ast, contractDefinition, environment, arguments.get(0));
                 result = new Expression(toConvert, elementaryTypeNameExpression.getElementaryTypeName()); // type conversion expression
-            } else if (functionCall.getCalled() instanceof ASTMemberAccess) {
+            } else if (functionCall.getCalled() instanceof ASTMemberAccess) { // TODO probably not limited to member access - what about arrays?
                 // This may be a structure initializer with canonical name including the contract:
                 //     s0 s = c0.s0(1, 2, 3...);
-                // Or it could be a function call, which is allowed:
+                // Or it could be a function call to a contract method:
                 //     bool b = c0.f();
-                Util.unimpl();
+                // TODO filter out the struct init case, handle like non-canonical structs below
+
+                // This must be a call to an expression of type function
+                Expression calledExpression = fromASTNode(ast, contractDefinition, environment, functionCall.getCalled());
+                ASTMemberAccess memberAccess = (ASTMemberAccess)functionCall.getCalled();
+                if (!(calledExpression.getType() instanceof ASTFunctionTypeName)) {
+                    throw new Exception("Call to something that is not a function in " + functionCall.toSolidityCode());
+                }
+                ASTFunctionTypeName functionTypeName = (ASTFunctionTypeName)calledExpression.getType();
+                ArrayList<Expression> arguments = functionCall.getExpressionArguments(contractDefinition, environment);
+                ASTNode returnType = functionTypeName.getReturnType();
+                result = new Expression(calledExpression, arguments, returnType);
             } else if (functionCall.getCalled() instanceof ASTIdentifier) {
                 // Look up called function (note: function declarations without body are also ASTFunctionDefinitions)
                 ASTFunctionDefinition functionDefinition = contractDefinition.getFunction(functionCall.getCalled().getName());
@@ -97,9 +108,8 @@ public class ExpressionBuilder {
                     returnType = functionDefinition.getReturnType();
                     functionCall.setInterpretationFunctionDefinition(functionDefinition);
                 }
-                ArrayList<Expression> arguments = functionCall.getExpressionArguments(contractDefinition, environment);
                 // Build Expression objects for all function arguments
-
+                ArrayList<Expression> arguments = functionCall.getExpressionArguments(contractDefinition, environment);
                 Expression callExpression = new Expression(functionCall, arguments, returnType);
                 result = callExpression;
             } else if (functionCall.getCalled() instanceof ASTNewExpression) {
@@ -217,15 +227,41 @@ public class ExpressionBuilder {
             Expression appliedToExpression = fromASTNode(ast, contractDefinition, environment, memberAccess.getAppliedTo());
 
             ASTStructDefinition structDefinition = Type.getStructType(ast, appliedToExpression.getType());
-            if (structDefinition == null) { // TODO same for contract?
-                throw new Exception("ExpressionBuilder.fromASTNode member access to something that is not a struct");
+
+            if (structDefinition != null) { // TODO same for contract?
+                ASTVariableDeclaration accessedMember = structDefinition.lookupMember(memberAccess.getName());
+                if (accessedMember == null) {
+                    throw new Exception("ExpressionBuilder.fromASTNode access to nonexistent struct member "
+                            + memberAccess.getName()
+                            + " in " + structDefinition.getCanonicalName());
+                }
+                result = new Expression(appliedToExpression, accessedMember);
+            } else {
+                ASTContractDefinition accessedContractDefinition = Type.getContractType(ast, appliedToExpression.getType());
+                if (accessedContractDefinition == null) {
+                    throw new Exception("ExpressionBuilder.fromASTNode member access to something that is not a struct");
+                }
+                ASTNode accessedMember = accessedContractDefinition.lookupVariableOrFunctionDeclaration(memberAccess.getName());
+                if (accessedMember == null) {
+                    throw new Exception("ExpressionBuilder.fromASTNode access to nonexistent contract member "
+                            + memberAccess.getName()
+                            + " in " + accessedContractDefinition.getName());
+                }
+
+                // This may be a member variable declaration or a function declaration. We have to untangle this here
+                // already to obtain the type of the expression
+                ASTNode type;
+                if (accessedMember instanceof ASTVariableDeclaration) {
+                    type = ((ASTVariableDeclaration)accessedMember).getTypeName();
+                } else if (accessedMember instanceof ASTFunctionDefinition) {
+                    ASTFunctionDefinition functionDefinition = (ASTFunctionDefinition)accessedMember;
+                    type = functionDefinition.getFunctionType();
+                } else {
+                    Util.unimpl();
+                    throw new Exception("unimpl");
+                }
+                result = new Expression(appliedToExpression, accessedMember, type);
             }
-            ASTVariableDeclaration accessedMember = structDefinition.lookupMember(memberAccess.getName());
-            if (accessedMember == null) {
-                throw new Exception("ExpressionBuilder.fromASTNode access to nonexistent member " + memberAccess.getName()
-                        + " in " + structDefinition.getCanonicalName());
-            }
-            result = new Expression(appliedToExpression, accessedMember);
         } else {
             throw new Exception("ExpressionBuilder.fromASTNode for unimplemented node type " + astNode.getClass().getName());
         }
