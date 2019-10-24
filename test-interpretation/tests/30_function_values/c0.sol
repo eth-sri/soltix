@@ -12,11 +12,11 @@ contract c0 {
    }
 
    function f1(uint a) public returns (uint) {
-     return a * 2;
+     return a * uint(2);
    }
    
    function f2(uint a) public returns (uint) {
-     return a / 2;
+     return a / uint(2);
    }
 
 }

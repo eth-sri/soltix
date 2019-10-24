@@ -91,6 +91,10 @@ public class Type {
             && ((ASTElementaryTypeName)type).getElementaryType() == ASTElementaryTypeName.ElementaryType.ELEMENTARY_TYPE_ADDRESS;
     }
 
+    public static boolean isFunctionType(ASTNode type) {
+        return type instanceof ASTFunctionTypeName;
+    }
+
     public static boolean isArrayType(ASTNode type) {
         return type instanceof ASTArrayTypeName;
     }
@@ -126,10 +130,14 @@ public class Type {
             throw new Exception("Type.isSameType is not defined for arrays");
         } else if (firstType instanceof ASTMapping) {
             throw new Exception("Type.isSameType is not defined for mappings");
-        } else if (firstType instanceof ASTFunctionTypeName && secondType instanceof ASTFunctionTypeName) {
+        } else if (isFunctionType(firstType) && isFunctionType(secondType)) {
             ASTFunctionTypeName firstFunctionType = (ASTFunctionTypeName)firstType;
             ASTFunctionTypeName secondFunctionType = (ASTFunctionTypeName)secondType;
-            return firstFunctionType.toSolidityCode().equals(secondFunctionType.toSolidityCode()); // TODO proper comparison
+
+            // TODO proper comparison instead of strings?
+            // TODO we exclude the visibility for now, because of issues such as public/internal being compatible
+            // (see tests/30_function_values, which fails without ignoring it)
+            return firstFunctionType.toSolidityCodeExcludingVisibility().equals(secondFunctionType.toSolidityCodeExcludingVisibility());
         } else {
             if (firstType instanceof ASTUserDefinedTypeName && secondType instanceof ASTUserDefinedTypeName) {
                 ASTStructDefinition firstStruct = ast.getStructDefinition(firstType.getName());

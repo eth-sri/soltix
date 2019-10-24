@@ -102,6 +102,7 @@ public class ASTVariableDeclaration extends ASTNode {
         return variable;
     }
 
+    static public boolean excludeNameFromSolidityCode = false;
     @Override
     public String toSolidityCode() throws Exception {
         String code = typeName != null? typeName.toSolidityCode(): "var";
@@ -119,7 +120,9 @@ public class ASTVariableDeclaration extends ASTNode {
         if (visibility != Definitions.Visibility.VISIBILITY_INTERNAL) {
             code += " " + visibility;
         }
-        code += " " + name;
+        if (!excludeNameFromSolidityCode) {
+            code += " " + name;
+        }
         if (initializer != null) {
             code += " = " + initializer.toSolidityCode();
         }

@@ -104,6 +104,9 @@ public class VariableEnvironment {
     public void setParentVariableEnvironment(VariableEnvironment parentVariableEnvironment) {
         this.parentVariableEnvironment = parentVariableEnvironment;
     }
+    public VariableEnvironment getParentVariableEnvironment() {
+        return parentVariableEnvironment;
+    }
 
     public Variable getVariable(String name) throws Exception {
         if (variables == null) {
@@ -197,7 +200,7 @@ public class VariableEnvironment {
 
         variables.put(var.getName(), values);
         variablesList.add(values);
-        if (Type.isIntegerType(var.getDeclaration().getTypeName())) {
+        if (Type.isIntegerType(var.getType())) {
             integerVariablesList.add(values);
         }
     }

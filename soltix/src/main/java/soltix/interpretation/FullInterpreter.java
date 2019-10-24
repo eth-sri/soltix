@@ -26,10 +26,7 @@ import soltix.interpretation.expressions.Expression;
 import soltix.interpretation.expressions.ExpressionBuilder;
 import soltix.interpretation.expressions.ExpressionEvaluationErrorHandler;
 import soltix.interpretation.expressions.ExpressionEvaluator;
-import soltix.interpretation.values.BoolValue;
-import soltix.interpretation.values.ContractValue;
-import soltix.interpretation.values.Value;
-import soltix.interpretation.values.ValueContainer;
+import soltix.interpretation.values.*;
 import soltix.interpretation.variables.Variable;
 import soltix.interpretation.variables.VariableEnvironment;
 import soltix.interpretation.variables.VariableValues;
@@ -226,6 +223,15 @@ public class FullInterpreter implements IInterpreterCallback {
             }
 
             variableValues.addValue(initializerValue);
+            environment.addVariableValues(variable, variableValues);
+        }
+
+        // Include functions as well - treated as "variables" with a FunctionValue as implicit initializer
+        for (ASTFunctionDefinition function : currentContract.getFunctions()) {
+            Variable variable = new Variable(function);
+            VariableValues variableValues = new VariableValues(variable, 0);
+            FunctionValue value = new FunctionValue(currentContract, function, function.getFunctionType());
+            variableValues.addValue(value);
             environment.addVariableValues(variable, variableValues);
         }
     }

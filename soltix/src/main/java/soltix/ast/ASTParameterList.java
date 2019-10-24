@@ -47,6 +47,7 @@ public class ASTParameterList extends ASTNode {
         }
         return code;
     }
+
     @Override
     public String toSolidityCodePostfix() { return null; }
 }

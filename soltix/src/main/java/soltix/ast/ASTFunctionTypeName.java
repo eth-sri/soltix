@@ -44,6 +44,23 @@ public class ASTFunctionTypeName extends ASTNode {
     @Override
     public String toSolidityCodePostfix() { return null; }
 
+    public String toSolidityCodeExcludingVisibility() throws Exception {
+        String savedVisibility = visibility;
+        visibility = "";
+
+        // Exclude parameter names as additional distraction
+        // TODO proper solution
+        boolean oldExcludeNameFromSolidityCode = ASTVariableDeclaration.excludeNameFromSolidityCode;
+        ASTVariableDeclaration.excludeNameFromSolidityCode = true;
+
+        String result = toSolidityCode();
+
+        ASTVariableDeclaration.excludeNameFromSolidityCode = oldExcludeNameFromSolidityCode;
+
+        visibility = savedVisibility;
+        return result;
+    }
+
     @Override
     public void finalize() throws Exception {
         if (getChildCount() < 2) {

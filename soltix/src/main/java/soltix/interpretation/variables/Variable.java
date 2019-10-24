@@ -19,10 +19,12 @@
  */
 package soltix.interpretation.variables;
 
+import soltix.ast.ASTFunctionDefinition;
 import soltix.ast.ASTNode;
 import soltix.ast.ASTVariableDeclaration;
 import soltix.ast.ASTVerbatimText;
 import soltix.interpretation.values.Value;
+import soltix.util.Util;
 
 import java.util.ArrayList;
 
@@ -30,8 +32,9 @@ import java.util.ArrayList;
  * Class to represent variables
  */
 public class Variable extends Value { // A variable also contains a value, just not a constant one
-    private ASTVariableDeclaration declaration;
+    private ASTVariableDeclaration declaration;        // if non-null: variable declaration
     private ASTVariableDeclaration shadowDeclaration;
+    private ASTFunctionDefinition  functionDefinition; // if non-null: function definition (this is not a real variable). TODO what's a better approach?
 
     public Variable(ASTVariableDeclaration declaration) {
         //super(declaration.getTypeName());
@@ -39,18 +42,43 @@ public class Variable extends Value { // A variable also contains a value, just 
         shadowDeclaration = null;
     }
 
-    public String getName() { return declaration.getName(); }
+    public Variable(ASTFunctionDefinition functionDefinition) {
+        this.functionDefinition = functionDefinition;
+    }
+
+    public String getName() {
+        if (declaration != null) {
+            return declaration.getName();
+        } else if (functionDefinition != null) {
+            return functionDefinition.getName();
+        } else {
+            Util.unimpl();
+            return null;
+        }
+    }
+
     public ASTVariableDeclaration getDeclaration() { return declaration; }
 
     public ASTVariableDeclaration getShadowNode() { return shadowDeclaration; }
     public void setShadowNode(ASTVariableDeclaration shadowDeclaration) { this.shadowDeclaration = shadowDeclaration; }
 
+    public ASTFunctionDefinition getFunctionDefinition() { return functionDefinition; }
+
     @Override
-    public ASTNode getType() { return declaration.getTypeName(); }
+    public ASTNode getType() {
+        if (declaration != null) {
+            return declaration.getTypeName();
+        } else if (functionDefinition != null) {
+            return functionDefinition.getFunctionType();
+        } else {
+            Util.unimpl();
+            return null;
+        }
+    }
 
     @Override
     public ASTNode toASTNode(boolean forJavaScript) throws Exception {
-        return new ASTVerbatimText(0, declaration.getName());
+        return new ASTVerbatimText(0, this.getName());
     }
 
     @Override

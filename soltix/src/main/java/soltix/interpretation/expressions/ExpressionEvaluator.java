@@ -441,7 +441,7 @@ public class ExpressionEvaluator {
                 // No-op
                 resultValues = operandValues;
             } else {
-                resultValues = evaluateCastForAll(operandValues, operand.getType(), targetType);
+                resultValues = evaluateCastForAll(environment, operandValues, operand.getType(), targetType);
 
                 if (freeIntermediateResults) {
                     operand.setComputedValues(null);
@@ -634,7 +634,8 @@ public class ExpressionEvaluator {
         return result;
     }
 
-    protected ComputedValues evaluateCastForAll(ComputedValues operandValues,
+    protected ComputedValues evaluateCastForAll(VariableEnvironment environment,
+                                                ComputedValues operandValues,
                                                 ASTNode sourceType,
                                                 ASTNode targetType) throws Exception {
         ComputedValues result = new ComputedValues();
@@ -660,6 +661,15 @@ public class ExpressionEvaluator {
                     && ((ASTElementaryTypeName)targetType).getBytes() == 0) {
                 // bytes(string), typically for keccak256 arguments for now
                 Value convertedValue = ((StringValue) value).convertToBytesType();
+                result.values.add(convertedValue);
+            } else if (Type.isFunctionType(sourceType)
+                    && Type.isFunctionType(targetType)
+                    && Type.isSameType(environment.getAST(), sourceType, targetType)) {
+                // Create a copy anyway. Keeping the original could result in invalid lvalue preservation later
+                FunctionValue originalValue = (FunctionValue)value;
+                FunctionValue convertedValue = new FunctionValue(originalValue.getContractDefinition(),
+                                                                 originalValue.getFunctionDefinition(),
+                                                                 originalValue.getType());
                 result.values.add(convertedValue);
             } else {
                 throw new Exception("Unimplemented cast from " + sourceType.toSolidityCode() + " to " + targetType.toSolidityCode());

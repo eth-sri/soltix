@@ -19,10 +19,7 @@
  */
 package soltix.interpretation.values;
 
-import soltix.ast.ASTContractDefinition;
-import soltix.ast.ASTFunctionDefinition;
-import soltix.ast.ASTLiteral;
-import soltix.ast.ASTNode;
+import soltix.ast.*;
 import soltix.interpretation.TypeContainer;
 import soltix.util.Util;
 
@@ -41,6 +38,10 @@ public class FunctionValue extends Value {
         this.functionDefinition = functionDefinition;
     }
 
+    public ASTContractDefinition getContractDefinition() {
+        return contractDefinition;
+    }
+
     public ASTFunctionDefinition getFunctionDefinition() {
         return functionDefinition;
     }
@@ -50,8 +51,7 @@ public class FunctionValue extends Value {
 
     @Override
     public ASTNode toASTNode(boolean forJavaScript) throws Exception {
-        Util.unimpl();
-        return null;
+        return new ASTVerbatimText(0, functionDefinition.getName());
     }
 
     @Override

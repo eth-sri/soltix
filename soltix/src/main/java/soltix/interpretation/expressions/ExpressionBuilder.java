@@ -22,6 +22,7 @@ package soltix.interpretation.expressions;
 
 import soltix.ast.*;
 import soltix.interpretation.Type;
+import soltix.interpretation.values.FunctionValue;
 import soltix.interpretation.values.Value;
 import soltix.interpretation.variables.Variable;
 import soltix.interpretation.variables.VariableEnvironment;
@@ -100,9 +101,24 @@ public class ExpressionBuilder {
                         // Builtin
                         returnType = new ASTElementaryTypeName(0, ASTElementaryTypeName.VARIABLE_LENGTH_BYTES_TYPE_NAME);
                     } else {
-                        Console.error(functionCall, "Cannot locate function '" + functionCall.getCalled().getName()
-                                + "', in call " + functionCall.toSolidityCode());
-                        throw new Exception("ExpressionBuilder.fromASTNode failed");
+                        // This may also be a variable holding a function value
+                        Variable variable = environment.getVariableIncludingParentEnvironments(functionCall.getCalled().getName());
+
+                        if (variable == null) {
+                            Console.error(functionCall, "Cannot locate function '" + functionCall.getCalled().getName()
+                                    + "', in call " + functionCall.toSolidityCode());
+                            throw new Exception("ExpressionBuilder.fromASTNode failed");
+                        }
+                        if (!Type.isFunctionType(variable.getType())) {
+                            throw new Exception("Unexpected call to non-function item " + variable.getName() +
+                                    " of type " + variable.getType().toSolidityCode());
+                        }
+
+                        // OK - continue below ...
+                        FunctionValue value = (FunctionValue)environment.resolveVariableValueIncludingParentEnvironments(0, variable.getName());
+                        functionDefinition = value.getFunctionDefinition();
+                        returnType = functionDefinition.getReturnType();
+                        functionCall.setInterpretationFunctionDefinition(functionDefinition);
                     }
                 } else {
                     returnType = functionDefinition.getReturnType();
