@@ -194,7 +194,7 @@ public class FullInterpreter implements IInterpreterCallback {
         globalInterpreterEnvironment = new VariableEnvironment(ast, true);
     }
 
-    protected void initializeContractEnvironment(VariableEnvironment environment,
+    protected void initializeContractEnvironment(ContractValue contractValue, //VariableEnvironment environment,
                                                  ASTContractDefinition currentContract) throws Exception {
         // Generate storage variables
         for (ASTNode tmp : currentContract.getVariables()) {
@@ -223,7 +223,7 @@ public class FullInterpreter implements IInterpreterCallback {
             }
 
             variableValues.addValue(initializerValue);
-            environment.addVariableValues(variable, variableValues);
+            contractValue.getInterpretationEnvironment().addVariableValues(variable, variableValues);
         }
 
         // Include functions as well - treated as "variables" with a FunctionValue as implicit initializer
@@ -232,8 +232,18 @@ public class FullInterpreter implements IInterpreterCallback {
             VariableValues variableValues = new VariableValues(variable, 0);
             FunctionValue value = new FunctionValue(currentContract, function, function.getFunctionType());
             variableValues.addValue(value);
-            environment.addVariableValues(variable, variableValues);
+            contractValue.getInterpretationEnvironment().addVariableValues(variable, variableValues);
         }
+
+        // Add "this" variable TODO make it immutable, and function value variables too
+        ASTVariableDeclaration thisDeclaration = new ASTVariableDeclaration(0, "this",
+                "contract", "storage", "internal", true, false);
+        thisDeclaration.addChildNode(new ASTUserDefinedTypeName(0, currentContract.getName()));
+        thisDeclaration.finalize();
+        Variable thisVariable = new Variable(thisDeclaration);
+        VariableValues thisValues = new VariableValues(thisVariable, 0);
+        thisValues.addValue(contractValue);
+        contractValue.getInterpretationEnvironment().addVariableValues(thisVariable, thisValues);
     }
 
     protected void initializeLocalFunctionEnvironment(SolidityStackFrame stackFrame,
@@ -284,7 +294,7 @@ public class FullInterpreter implements IInterpreterCallback {
 
 
         // TODO remove all "global" things, associate them with ContractValues; call constructor with args
-            initializeContractEnvironment(environment, contractType);
+            initializeContractEnvironment(/*environment*/value, contractType);
         //    initializedGlobalEnvironment = true;
        // }
 

@@ -85,7 +85,7 @@ public class ASTFunctionTypeName extends ASTNode {
 
 
         if (savedReturnList.getChildCount() > 0) {
-            returnType = savedReturnList.getChild(0);
+            returnType = ((ASTVariableDeclaration)savedReturnList.getChild(0)).getTypeName();
             // TODO tuple types - returnList.getChildCount() > 1
         }
     }

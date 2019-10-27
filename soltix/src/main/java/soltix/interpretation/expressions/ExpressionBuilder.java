@@ -69,7 +69,8 @@ public class ExpressionBuilder {
                 }
                 Expression toConvert = fromASTNode(ast, contractDefinition, environment, arguments.get(0));
                 result = new Expression(toConvert, elementaryTypeNameExpression.getElementaryTypeName()); // type conversion expression
-            } else if (functionCall.getCalled() instanceof ASTMemberAccess) { // TODO probably not limited to member access - what about arrays?
+            } else if (functionCall.getCalled() instanceof ASTMemberAccess
+                || functionCall.getCalled() instanceof ASTFunctionCall) { // TODO what about arrays?
                 // This may be a structure initializer with canonical name including the contract:
                 //     s0 s = c0.s0(1, 2, 3...);
                 // Or it could be a function call to a contract method:
@@ -78,11 +79,11 @@ public class ExpressionBuilder {
 
                 // This must be a call to an expression of type function
                 Expression calledExpression = fromASTNode(ast, contractDefinition, environment, functionCall.getCalled());
-                ASTMemberAccess memberAccess = (ASTMemberAccess)functionCall.getCalled();
                 if (!(calledExpression.getType() instanceof ASTFunctionTypeName)) {
-                    throw new Exception("Call to something that is not a function in " + functionCall.toSolidityCode());
+                    throw new Exception("Call to something that is not a function in " + functionCall.toSolidityCode()
+                        + ", type is " + calledExpression.getType().toSolidityCode());
                 }
-                ASTFunctionTypeName functionTypeName = (ASTFunctionTypeName)calledExpression.getType();
+                ASTFunctionTypeName functionTypeName = (ASTFunctionTypeName) calledExpression.getType();
                 ArrayList<Expression> arguments = functionCall.getExpressionArguments(contractDefinition, environment);
                 ASTNode returnType = functionTypeName.getReturnType();
                 result = new Expression(calledExpression, arguments, returnType);
