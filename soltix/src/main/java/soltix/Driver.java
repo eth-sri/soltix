@@ -112,15 +112,21 @@ public class Driver {
                 return false;
             }
         }
+
+        JSONObject tempTransactionsJSONObject = new JSONObject();
+        String tempConstructedObjectName = null;
         if (Configuration.generateTruffleConstructorInvocationContract != null
                 && Configuration.generateFullContractFile == null) { // done later for this setting
-            if (!generateTruffleConstructorInvocation(ast, ValueGenerator.IntegerGenerationPolicy.INTEGER_GENERATION_POLICY_EXCLUSIVELY_SMALL)) {
+            tempConstructedObjectName = generateTruffleConstructorInvocation(ast,
+                    tempTransactionsJSONObject,
+                    ValueGenerator.IntegerGenerationPolicy.INTEGER_GENERATION_POLICY_EXCLUSIVELY_SMALL);
+            if (tempConstructedObjectName == null) {
                 return false;
             }
         }
         if (Configuration.generateTruffleTransactionContract != null
                 && Configuration.generateFullContractFile == null) { // done differently for this setting
-            if (!generateTruffleTransaction(ast, ValueGenerator.IntegerGenerationPolicy.INTEGER_GENERATION_POLICY_EXCLUSIVELY_SMALL)) {
+            if (!generateTruffleTransaction(ast, tempTransactionsJSONObject, tempConstructedObjectName, ValueGenerator.IntegerGenerationPolicy.INTEGER_GENERATION_POLICY_EXCLUSIVELY_SMALL)) {
                 return false;
             }
         }
@@ -243,7 +249,12 @@ public class Driver {
                     }
 
                     // Now that the contract is available, we can generate a truffle invocation file
-                    if (!generateTruffleConstructorInvocation(ast, ValueGenerator.IntegerGenerationPolicy.INTEGER_GENERATION_POLICY_FAVOR_SMALL)) {
+                    // TODO support multi-contract instantiations
+                    String constructedObjectName = generateTruffleConstructorInvocation(ast,
+                            transactionsJSONObject,
+                            ValueGenerator.IntegerGenerationPolicy.INTEGER_GENERATION_POLICY_FAVOR_SMALL);
+
+                    if (constructedObjectName == null) {
                         return false;
                     }
 
@@ -265,11 +276,12 @@ public class Driver {
                     }
 
                     // Write previously generated transactions to file. First add the outro() calls
+                    // TODO this probably needs to be merged with the construction above for multi-contracts
                     for (ASTContractDefinition contract : ast.getContracts()) {
                         ASTFunctionDefinition outroFunction = contract.getOutroFunction();
                         TransactionGenerator transactionGenerator = contractGenerator.getTransactionGenerator();
                         logger.info("Generating tx for result analysis " + outroFunction.getName() + " in " + contract.getName());
-                        transactionGenerator.generateTruffleTransaction(ast, transactionsAST, transactionsJSONObject, contract, outroFunction, ValueGenerator.IntegerGenerationPolicy.INTEGER_GENERATION_POLICY_FAVOR_SMALL);
+                        transactionGenerator.generateTruffleTransaction(ast, transactionsAST, transactionsJSONObject, constructedObjectName, contract, outroFunction, ValueGenerator.IntegerGenerationPolicy.INTEGER_GENERATION_POLICY_FAVOR_SMALL);
                     }
 
                     FileOutputStream file = new FileOutputStream(Configuration.generateTruffleTransactionFile);
@@ -396,18 +408,19 @@ public class Driver {
         return true;
     }
 
-    protected boolean generateTruffleConstructorInvocation(AST ast, ValueGenerator.IntegerGenerationPolicy integerGenerationPolicy) {
+    protected String generateTruffleConstructorInvocation(AST ast, JSONObject transactionsJSONObject, ValueGenerator.IntegerGenerationPolicy integerGenerationPolicy) {
         AST constructorInvocationAST = new AST();
         ASTContractDefinition contract = ast.getContract(Configuration.generateTruffleConstructorInvocationContract);
+        String constructedObjectName = "c"; // TODO
 
         if (contract == null) {
             logger.error("generateTruffleConstructorInvocation: Cannot locate requested contract " +
                 Configuration.generateTruffleConstructorInvocationContract);
-            return false;
+            return null;
         }
         try {
             TransactionGenerator transactionGenerator = new TransactionGenerator(new RandomNumbers(Configuration.randomNumbersSeed));
-            transactionGenerator.generateTruffleConstructorInvocation(ast, constructorInvocationAST, contract, integerGenerationPolicy);
+            transactionGenerator.generateTruffleConstructorInvocation(ast, constructorInvocationAST, transactionsJSONObject, constructedObjectName, contract, integerGenerationPolicy);
             //Emitter emitter = new Emitter();
             FileOutputStream file = new FileOutputStream(Configuration.generateTruffleConstructorInvocationFile);
             Emitter.emitJavaScriptCode(file, constructorInvocationAST); //.emitGraphPlot(file, ast);
@@ -417,9 +430,9 @@ public class Driver {
                     + Configuration.generateTruffleConstructorInvocationContract
                     + ": " + e.toString());
             e.printStackTrace();
-            return false;
+            return null;
         }
-        return true;
+        return constructedObjectName;
     }
 
     protected void generateOutroCall(AST ast, 
@@ -427,18 +440,19 @@ public class Driver {
                                      TransactionGenerator transactionGenerator, 
                                      FileOutputStream file,
                                      JSONObject transactionsJSONObject,
+				     String calledObjectName,
                                      ValueGenerator.IntegerGenerationPolicy integerGenerationPolicy) throws Exception {
         if (contract.getOutroFunction() != null) {
             // Terminate transactions list with final state output
             AST transactionAST = new AST();
             ASTFunctionDefinition outroFunction = contract.getOutroFunction();
             logger.info("Generating tx for result analysis " + outroFunction.getName() + " in " + contract.getName());
-            transactionGenerator.generateTruffleTransaction(ast, transactionAST, transactionsJSONObject, contract, outroFunction, integerGenerationPolicy);
+            transactionGenerator.generateTruffleTransaction(ast, transactionAST, transactionsJSONObject, calledObjectName, contract, outroFunction, integerGenerationPolicy);
             Emitter.emitJavaScriptCode(file, transactionAST);
         }
     }
 
-    protected boolean generateTruffleTransaction(AST ast, ValueGenerator.IntegerGenerationPolicy integerGenerationPolicy) {
+    protected boolean generateTruffleTransaction(AST ast, JSONObject transactionsJSONObject, String calledObjectName, ValueGenerator.IntegerGenerationPolicy integerGenerationPolicy) {
         //AST transactionAST = new AST();
         //ASTEditor constructorInvocationEditor = new ASTEditor(transactionAST);
         ASTContractDefinition contract = ast.getContract(Configuration.generateTruffleTransactionContract);
@@ -460,14 +474,13 @@ public class Driver {
 
             TransactionGenerator transactionGenerator = new TransactionGenerator(new RandomNumbers(Configuration.randomNumbersSeed));
 
-            JSONObject transactionsJSONObject = new JSONObject();
             for (ASTFunctionDefinition functionToCall : callableFunctions) {
                 AST transactionAST = new AST();
                 logger.info("Generating tx for " + functionToCall.getName() + " in " + contract.getName());
-                transactionGenerator.generateTruffleTransaction(ast, transactionAST, transactionsJSONObject, contract, functionToCall, integerGenerationPolicy);
+                transactionGenerator.generateTruffleTransaction(ast, transactionAST, transactionsJSONObject, calledObjectName, contract, functionToCall, integerGenerationPolicy);
                 Emitter.emitJavaScriptCode(file, transactionAST); //.emitGraphPlot(file, ast);
             }
-            generateOutroCall(ast, contract, transactionGenerator, file, transactionsJSONObject, integerGenerationPolicy);
+            generateOutroCall(ast, contract, transactionGenerator, file, transactionsJSONObject, calledObjectName, integerGenerationPolicy);
             file.close();
 
             writeJSONFile(Configuration.generateTruffleTransactionFileJSON, transactionsJSONObject);
@@ -692,20 +705,7 @@ public class Driver {
         }
 
         JSONArray transactionsJSONArray = (JSONArray)transactionsJSONObject.get("transactions");
-        ArrayList<Transaction> transactionsList = new ArrayList<Transaction>();
-
-        try {
-            for (int i = 0; i < transactionsJSONArray.size(); ++i) {
-                Transaction transaction = new Transaction(ast, (JSONObject) transactionsJSONArray.get(i));
-                transactionsList.add(transaction);
-            }
-        } catch (Exception e) {
-            logger.error("Driver.interpretProgram: Exception while parsing tx-json file " + transactionsJSONFile + ": " + e.toString());
-            e.printStackTrace();
-            return false;
-        }
-
-        FullInterpreter fullInterpreter = new FullInterpreter(transactionsList);
+        FullInterpreter fullInterpreter = new FullInterpreter(transactionsJSONArray);
         ASTInterpreter interpreter = new ASTInterpreter(ast, fullInterpreter);
         try {
             interpreter.run();

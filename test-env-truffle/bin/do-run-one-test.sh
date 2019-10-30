@@ -387,6 +387,8 @@ EOF
 });
 EOF
 
+cp "$TRANSACTION_FILE_JSON" "$TESTDIR"/test/c0.tx-json
+
 fi
 cp "$TESTDIR/test/test.js" "$RESULT_DIR"
 

@@ -135,6 +135,7 @@ public class ContractGenerator {
 
             transactionGenerator.generateTruffleTransaction(ast /* to look up types */, transactionAST,
                 transactionsJSONObject,
+                "c", /*TODO*/
                 contractDefinition, functionDefinition,
                     ValueGenerator.IntegerGenerationPolicy.INTEGER_GENERATION_POLICY_FAVOR_SMALL);
 

@@ -20,6 +20,7 @@
 
 package soltix.interpretation;
 
+import org.json.simple.JSONArray;
 import soltix.Configuration;
 import soltix.ast.*;
 import soltix.interpretation.expressions.Expression;
@@ -48,7 +49,7 @@ import java.util.Stack;
 public class FullInterpreter implements IInterpreterCallback {
     private AST ast;
     private ASTInterpreter astInterpreter;
-    private ArrayList<Transaction> transactions;
+    private JSONArray transactionsJSONArray;
     private ExpressionEvaluator expressionEvaluator;
     private ValueGenerator valueGenerator;
 
@@ -73,8 +74,8 @@ public class FullInterpreter implements IInterpreterCallback {
         public Value getReturnValue() { return returnValue; }
     }
 
-    public FullInterpreter(ArrayList<Transaction> transactions) {
-        this.transactions = transactions;
+    public FullInterpreter(JSONArray transactionsArray) {
+        this.transactionsJSONArray = transactionsArray;
         // TODO Supply proper error handler policy to ensure stability for preceding iterations
         expressionEvaluator = new ExpressionEvaluator(new ExpressionEvaluationErrorHandler(new RandomNumbers(Configuration.randomNumbersSeed)), this);
     }
@@ -121,43 +122,40 @@ public class FullInterpreter implements IInterpreterCallback {
     }
 
 
-    private /*ASTContractDefinition*/ContractValue currentContractValueContext = null;
+    private ContractValue currentContractValueContext = null;
 
     public void run() throws Exception {
-        //initializeContractEnvironment(transactions.get(0).getContract()); // TODO multiple contracts?
-        createGlobalEnvironment(); // TODO multiple contracts?
+        createGlobalEnvironment();
 
-
-
-        if (transactions.size() == 0) {
+        if (transactionsJSONArray.size() == 0) {
             throw new Exception("Empty transactions list");
         }
 
-        /*
-        // TODO unify with ContractValue
-        ASTContractDefinition contractContext = transactions.get(0).getContract();
-        currentContractValueContext = contractContext;
-        if (!initializedGlobalEnvironment) {
-            // Due to expression evaluation for initializers requiring a variable environment and potentially other
-            // stack frame elements, we initialize storage variables at the first function call.
-            // An unpleasant example that requires variable processing is:
-            //    int x = 5;
-            //    int y = x;
-            initializeContractEnvironment(contractContext);
-            initializedGlobalEnvironment = true;
-        }*/
-        currentContractValueContext = interpretNewExpression(transactions.get(0).getContract()/*TODO*/,
-                                                        new ArrayList<Value>() /* TODO */);
+        for (int i = 0; i < transactionsJSONArray.size(); ++i) {
+            Transaction transaction = new Transaction(ast, (JSONObject) transactionsJSONArray.get(i), globalInterpreterEnvironment);
+            if (transaction.getFunction().isConstructor()) {
+                currentContractValueContext = interpretNewExpression(transaction.getContract(), transaction.getArguments() /* TODO evaluatable args */);
 
+                ASTVariableDeclaration contractVariableDeclaration = new ASTVariableDeclaration(0, transaction.getContractObjectName(),
+                        "contract", "storage", "internal", false, false);
+                contractVariableDeclaration.addChildNode(new ASTUserDefinedTypeName(0, transaction.getContract().getName()));
+                contractVariableDeclaration.finalize();
 
+                Variable contractVariable = new Variable(contractVariableDeclaration);
+                VariableValues variableValues = new VariableValues(contractVariable, 0);
+                variableValues.addValue(currentContractValueContext);
+                globalInterpreterEnvironment.addVariableValues(contractVariable, variableValues);
+            } else {
+                Value variableValue = globalInterpreterEnvironment.resolveVariableValue(0, transaction.getContractObjectName());
+                if (!(variableValue instanceof ContractValue)) {
+                    throw new Exception("FullInterpreter.run: transaction uses non-contract object " + transaction.getContractObjectName());
+                }
 
-
-
-        for (Transaction transaction : transactions) {
-            Value result = interpretTransaction(transaction);
-            // TODO use result
+                currentContractValueContext = (ContractValue)variableValue; // TODO proper value propagation, this will break sooner or later
+                Value result = interpretTransaction(transaction);
+                // TODO use result
+            }
         }
-        //globalEnvironment = null;
         globalInterpreterEnvironment = null;
     }
 

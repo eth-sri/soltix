@@ -119,10 +119,12 @@ public class TransactionGenerator {
         return result;
     }
 
+    // TODO unify generateFunctionCallArgumentList with generateFunctionCallArgumentList2?
     protected void generateFunctionCallArgumentList(AST contractAST,
                                                     ASTFunctionCall functionCall,
                                                     ASTParameterList parameterList,
                                                     ValueGenerator.IntegerGenerationPolicy integerGenerationPolicy,
+                                                    Transaction transaction,
                                                     boolean forJavaScript) throws Exception {
 
         for (ASTNode node : parameterList.getChildren()) {
@@ -132,6 +134,7 @@ public class TransactionGenerator {
             declaration.setInitializerValue(value); // (technically not an "initializer" but an argument)
             ASTNode valueNode = value.toASTNode(forJavaScript);
             functionCall.addChildNode(valueNode);
+            transaction.addArgumentValue(value);
         }
     }
 
@@ -169,6 +172,8 @@ public class TransactionGenerator {
     // TODO Use ASTVerbatimText or make the complex construction operations generally reusable
     public void generateTruffleConstructorInvocation(AST contractAST,
                                                      AST constructorAST,
+                                                     JSONObject allTransactionsJSONObject,
+                                                     String constructedObjectName,
                                                      ASTContractDefinition contract,
                                                      ValueGenerator.IntegerGenerationPolicy integerGenerationPolicy) throws Exception {
         if (constructorAST.getRoot() != null) {
@@ -203,9 +208,12 @@ public class TransactionGenerator {
         functionCall.addChildNode(identifierContractName);
         ASTFunctionDefinition constructor = contract.getConstructor();
 
+        Transaction currentTransaction = new Transaction(true, contract, constructedObjectName, constructor /* may be null */);
         if (constructor != null) {
-            generateFunctionCallArgumentList(contractAST, functionCall, constructor.getParameterList(), integerGenerationPolicy,true);
+            generateFunctionCallArgumentList(contractAST, functionCall, constructor.getParameterList(),
+                    integerGenerationPolicy, currentTransaction,true);
         }
+        storeTransaction(allTransactionsJSONObject, currentTransaction);
 
         expressionStatement.addChildNode(functionCall);
 
@@ -225,6 +233,7 @@ public class TransactionGenerator {
     public void generateTruffleTransaction(AST contractAST,
                                            AST transactionAST,
                                            JSONObject allTransactionsJSONObject,
+                                           String objectName,
                                            ASTContractDefinition contract, // TODO: Use or remove this
                                            ASTFunctionDefinition function,
                                            ValueGenerator.IntegerGenerationPolicy integerGenerationPolicy) throws Exception {
@@ -236,7 +245,7 @@ public class TransactionGenerator {
         //     logEvents(await instance.<function>(<arg1>, ...));
 
         //JSONObject currentTransactionJSONObject = new JSONObject();
-        Transaction currentTransaction = new Transaction(contract, function);
+        Transaction currentTransaction = new Transaction(false, contract, objectName, function);
 
         //currentTransactionJSONObject.put("contract", contract.getName());
         //currentTransactionJSONObject.put("function", function.getName());
@@ -248,9 +257,21 @@ public class TransactionGenerator {
         ASTNode callNode = new ASTVerbatimText(0, "logEvents(await instance." + function.getName() + "(" + generatedArgumentList + "));");
         transactionAST.addInnerNode(callNode);
 
+        /*
         JSONArray transactionsArray =  allTransactionsJSONObject.containsKey("transactions")
                                             ? (JSONArray)allTransactionsJSONObject.get("transactions")
                                                 : new JSONArray();
+        transactionsArray.add(currentTransaction.toJSONObject()); //currentTransactionJSONObject);
+        allTransactionsJSONObject.put("transactions", transactionsArray);
+
+         */
+        storeTransaction(allTransactionsJSONObject, currentTransaction);
+    }
+
+    protected void storeTransaction(JSONObject allTransactionsJSONObject, Transaction currentTransaction) throws Exception {
+        JSONArray transactionsArray =  allTransactionsJSONObject.containsKey("transactions")
+                ? (JSONArray)allTransactionsJSONObject.get("transactions")
+                : new JSONArray();
         transactionsArray.add(currentTransaction.toJSONObject()); //currentTransactionJSONObject);
         allTransactionsJSONObject.put("transactions", transactionsArray);
     }
