@@ -1,1 +1,5 @@
-{"transactions":[{"args":["a5","8c","0x0366fd1df0180e6fb232b7","0x80f9b1"],"contract":"c0","function":"f0"},{"args":[],"contract":"c0","function":"__outro"}]}
+{"transactions":[
+{"args":[],"construction":"c","type":"c0"},
+{"args":["a5","8c","0x0366fd1df0180e6fb232b7","0x80f9b1"],"call":"c","function":"f0"},
+{"args":[],"call":"c","function":"__outro"}
+]}

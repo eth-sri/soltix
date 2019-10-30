@@ -1,1 +1,4 @@
-{"transactions":[{"args":["8"],"contract":"c0","function":"f0"}]}
+{"transactions":[
+{"args":[],"construction":"c","type":"c0"},
+{"args":["8"],"call":"c","function":"f0"}
+]}

@@ -1,1 +1,14 @@
-{"transactions":[{"args":[true,"0xcad8fee1d6c16516cee2944e184c3ac9d318b314","0x3f3eba8dd1a30589786a95ceb29d9205262197e610b2cc"],"contract":"c0","function":"f0"},{"args":["f3",true,"0xdc60a0abdfe1fefdfe4c"],"contract":"c0","function":"f1"},{"args":["0x76","7382569af9798d463291","0x14f318dcd877ab","0x5bd56d09ac7c10215b","0x21dbafd17756158d4548e230b5c1"],"contract":"c0","function":"f2"},{"args":["0xada5ef9bf1699fff434ebce7ba476e64997dce5f0ddcfb07d4a6","0x195bbbce1680eb3b84425a51ebb8df3ee78412ccbb9aa6343bb3","0xfd88aeee4d0ab41e486e525e1da50e885c746bd5c64321dfd94212ccd8e08e","2a","0x054b29034933efe7a4a1"],"contract":"c0","function":"f3"},{"args":["0x3a9eac"],"contract":"c0","function":"f4"},{"args":[true],"contract":"c0","function":"f5"},{"args":["0x1deb14d374566770e38835aa3306b68051ccfe953d52ab650b0ff6c3e0"],"contract":"c0","function":"f6"},{"args":[true,"11","0x4fceb6044a6ef79d41845dd9692e1d045ae0a32e6f50c98db76529",true],"contract":"c0","function":"f7"},{"args":["0xb5c577589a7d70c106","65","-6f","0x6e54cf"],"contract":"c0","function":"f8"},{"args":[],"contract":"c0","function":"f9"},{"args":[],"contract":"c0","function":"__outro"}]}
+{"transactions":[
+{"args":[],"construction":"c","type":"c0"},
+{"args":[true,"0xcad8fee1d6c16516cee2944e184c3ac9d318b314","0x3f3eba8dd1a30589786a95ceb29d9205262197e610b2cc"],"call":"c","function":"f0"},
+{"args":["f3",true,"0xdc60a0abdfe1fefdfe4c"],"call":"c","function":"f1"},
+{"args":["0x76","7382569af9798d463291","0x14f318dcd877ab","0x5bd56d09ac7c10215b","0x21dbafd17756158d4548e230b5c1"],"call":"c","function":"f2"},
+{"args":["0xada5ef9bf1699fff434ebce7ba476e64997dce5f0ddcfb07d4a6","0x195bbbce1680eb3b84425a51ebb8df3ee78412ccbb9aa6343bb3","0xfd88aeee4d0ab41e486e525e1da50e885c746bd5c64321dfd94212ccd8e08e","2a","0x054b29034933efe7a4a1"],"call":"c","function":"f3"},
+{"args":["0x3a9eac"],"call":"c","function":"f4"},
+{"args":[true],"call":"c","function":"f5"},
+{"args":["0x1deb14d374566770e38835aa3306b68051ccfe953d52ab650b0ff6c3e0"],"call":"c","function":"f6"},
+{"args":[true,"11","0x4fceb6044a6ef79d41845dd9692e1d045ae0a32e6f50c98db76529",true],"call":"c","function":"f7"},
+{"args":["0xb5c577589a7d70c106","65","-6f","0x6e54cf"],"call":"c","function":"f8"},
+{"args":[],"call":"c","function":"f9"},
+{"args":[],"call":"c","function":"__outro"}
+]}

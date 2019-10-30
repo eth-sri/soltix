@@ -1,1 +1,14 @@
-{"transactions":[{"args":["0xe134881e9f"],"contract":"c0","function":"f0"},{"args":[true],"contract":"c0","function":"f1"},{"args":["-9c","0x214cb0","0x0848e9d12576289ca2debc098ba6c3a4ed","0xc665"],"contract":"c0","function":"f2"},{"args":["0xfabdddbda5","0x3e8c4c22fcd7dd5bda77be3a9de38eb794f5d81257c49ce5f449533711","0x33734e1d4fe0818ec8b5d84194d20365403ab14f86c02e1e0fc6a7ce","0xc8c8768d",true],"contract":"c0","function":"f3"},{"args":[],"contract":"c0","function":"f4"},{"args":["0xa16fdec2197505907b581be108f79c","0x705435efa2da1b266443d5","0xa0f96d4ccdda74ae5a5b1da76e4fe86547a4b539706249fdfa645b27b09c","d1",true],"contract":"c0","function":"f5"},{"args":["-11","ad","42318f441eace36ccb54497d1cb23f738de9910cee688124d59cc68ce65871"],"contract":"c0","function":"f6"},{"args":["0x6d","73e02e","d854fa33491a58b95357a28f526118514afe93340bad8cb69da7351a4686"],"contract":"c0","function":"f7"},{"args":[],"contract":"c0","function":"f8"},{"args":["e45022531974297c3a0543ddfc9e23ed79d50bd653c5a116595e16da8e","23","eb4077586bcbaa0fb25665de989198ec2066a81eda","5863d24cc63254e3691007be7f0cd228449f1d0c66631c8c1325c51f11"],"contract":"c0","function":"f9"},{"args":[],"contract":"c0","function":"__outro"}]}
+{"transactions":[
+{"args":[],"construction":"c","type":"c0"},
+{"args":["0xe134881e9f"],"call":"c","function":"f0"},
+{"args":[true],"call":"c","function":"f1"},
+{"args":["-9c","0x214cb0","0x0848e9d12576289ca2debc098ba6c3a4ed","0xc665"],"call":"c","function":"f2"},
+{"args":["0xfabdddbda5","0x3e8c4c22fcd7dd5bda77be3a9de38eb794f5d81257c49ce5f449533711","0x33734e1d4fe0818ec8b5d84194d20365403ab14f86c02e1e0fc6a7ce","0xc8c8768d",true],"call":"c","function":"f3"},
+{"args":[],"call":"c","function":"f4"},
+{"args":["0xa16fdec2197505907b581be108f79c","0x705435efa2da1b266443d5","0xa0f96d4ccdda74ae5a5b1da76e4fe86547a4b539706249fdfa645b27b09c","d1",true],"call":"c","function":"f5"},
+{"args":["-11","ad","42318f441eace36ccb54497d1cb23f738de9910cee688124d59cc68ce65871"],"call":"c","function":"f6"},
+{"args":["0x6d","73e02e","d854fa33491a58b95357a28f526118514afe93340bad8cb69da7351a4686"],"call":"c","function":"f7"},
+{"args":[],"call":"c","function":"f8"},
+{"args":["e45022531974297c3a0543ddfc9e23ed79d50bd653c5a116595e16da8e","23","eb4077586bcbaa0fb25665de989198ec2066a81eda","5863d24cc63254e3691007be7f0cd228449f1d0c66631c8c1325c51f11"],"call":"c","function":"f9"},
+{"args":[],"call":"c","function":"__outro"}
+]}
