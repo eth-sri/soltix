@@ -55,6 +55,7 @@ public class Transaction {
     }
 
     //public ASTContractDefinition getContract() { return contract; }
+    public boolean getIsConstruction() { return isConstruction; }
     public ASTContractDefinition getContract() { return contract; }
     public Variable getContractVariable() { return contractVariable; }
     public String getContractObjectName() { return contractObjectName; }
@@ -86,6 +87,8 @@ public class Transaction {
 
     public void fromJSONObject(AST ast, JSONObject jsonObject, VariableEnvironment environment) throws Exception {
         if (jsonObject.get("construction") != null) {
+            isConstruction = true;
+
             // Contract object construction / deployment case
             contractObjectName = (String)jsonObject.get("construction");
 
@@ -99,6 +102,8 @@ public class Transaction {
             }
             function = contract.getConstructor(); // may be null
         } else {
+            isConstruction = false;
+
             // Transaction / function call case
             contractObjectName = (String)jsonObject.get("call");
             String functionName = (String)jsonObject.get("function");
@@ -133,7 +138,6 @@ public class Transaction {
             }
         } else {
             // Load argument values in accordance with declared function parameters
-
             ArrayList<ASTVariableDeclaration> declaredParameters = function.getParameterList().toArrayList();
             if (declaredParameters.size() != jsonArgumentArray.size()) {
                 throw new Exception("Transaction.fromJSONObject: function '" + function.getName() + "' has "

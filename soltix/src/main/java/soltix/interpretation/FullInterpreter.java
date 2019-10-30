@@ -133,7 +133,7 @@ public class FullInterpreter implements IInterpreterCallback {
 
         for (int i = 0; i < transactionsJSONArray.size(); ++i) {
             Transaction transaction = new Transaction(ast, (JSONObject) transactionsJSONArray.get(i), globalInterpreterEnvironment);
-            if (transaction.getFunction().isConstructor()) {
+            if (transaction.getIsConstruction()) {
                 currentContractValueContext = interpretNewExpression(transaction.getContract(), transaction.getArguments() /* TODO evaluatable args */);
 
                 ASTVariableDeclaration contractVariableDeclaration = new ASTVariableDeclaration(0, transaction.getContractObjectName(),
