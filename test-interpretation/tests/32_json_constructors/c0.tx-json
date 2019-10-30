@@ -1,0 +1,9 @@
+{"transactions":[
+{"args":["5"],"construction":"c","type":"c0"},
+{"call":"c","args":["1"],"function":"f"},
+{"call":"c","args":["2"],"function":"f"},
+{"call":"c","args":["3"],"function":"f"},
+{"args":["5"],"construction":"c2","type":"c0"},
+{"call":"c2","args":["4"],"function":"f"},
+{"call":"c","args":["1"],"function":"f"},
+]}
