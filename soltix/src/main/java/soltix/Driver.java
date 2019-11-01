@@ -503,6 +503,10 @@ public class Driver {
             reduceFunctions = new ArrayList<String>();
             for (ASTContractDefinition contract : ast.getContracts()) {
                 for (ASTFunctionDefinition function : contract.getFunctions()) {
+                    if (function.isConstructor()) {
+                        // Special constructor case - don't bother
+                        continue;
+                    }
                     String reduceFunction = contract.getName() + ":" + function.getName();
                     reduceFunctions.add(reduceFunction);
                 }
@@ -653,7 +657,7 @@ public class Driver {
         return true;
     }
 
-    protected boolean writeSolidityOutput(AST ast, OutputStream consoleOutputStream, String outputFilePath) {
+    public static boolean writeSolidityOutput(AST ast, OutputStream consoleOutputStream, String outputFilePath) {
         // Write Solidity output - if an output file is specified, write to that, otherwise to
         // the same supplied (console) output stream to which AST debug output is also written
         //  OutputStream solidityOutputStream = output;
@@ -692,20 +696,47 @@ public class Driver {
         return true;
     }
 
-
-    protected boolean interpretProgram(AST ast, String transactionsJSONFile, String outputLogFile) {
+    protected JSONArray loadJSONTransactions(String transactionsJSONFile) {
         JSONParser parser = new JSONParser();
         JSONObject transactionsJSONObject;
 
         try {
             transactionsJSONObject = (JSONObject) parser.parse(new FileReader(transactionsJSONFile));
         } catch (Exception e) {
-            logger.error("Driver.interpretProgram: Exception while loading tx-json file " + transactionsJSONFile + ": " + e.toString());
+            logger.error("Driver.loadJSONTransactions: Exception while loading tx-json file " + transactionsJSONFile + ": " + e.toString());
+            return null;
+        }
+
+        return (JSONArray)transactionsJSONObject.get("transactions");
+    }
+
+    protected BufferedReader openTransactionsInputCodeStream(String inputFile) throws Exception {
+        return new BufferedReader(new FileReader(inputFile));
+    }
+
+    protected boolean interpretProgram(AST ast, String transactionsInputFile, String outputLogFile)  {
+        JSONArray transactionsJSONArray = null;
+        BufferedReader transactionsInputCodeReader = null;
+
+        if (transactionsInputFile.endsWith(".tx-json")) {
+            transactionsJSONArray = loadJSONTransactions(transactionsInputFile);
+            if (transactionsJSONArray == null) {
+                return false;
+            }
+        } else if (transactionsInputFile.endsWith(".tx-expr")) {
+            try {
+                transactionsInputCodeReader = openTransactionsInputCodeStream(transactionsInputFile);
+            } catch (Exception e) {
+                logger.error("Cannot open input code stream for file " + transactionsInputFile + ": "+ e.toString());
+                return false;
+            }
+        } else {
+            logger.error("Driver.interpretProgram: Transactions file with unknown ending (not .tx-json/.tx-expr): "
+                + transactionsInputFile);
             return false;
         }
 
-        JSONArray transactionsJSONArray = (JSONArray)transactionsJSONObject.get("transactions");
-        FullInterpreter fullInterpreter = new FullInterpreter(transactionsJSONArray);
+        FullInterpreter fullInterpreter = new FullInterpreter(transactionsJSONArray, transactionsInputCodeReader);
         ASTInterpreter interpreter = new ASTInterpreter(ast, fullInterpreter);
         try {
             interpreter.run();

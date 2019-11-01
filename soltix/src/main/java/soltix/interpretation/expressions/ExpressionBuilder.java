@@ -134,15 +134,12 @@ public class ExpressionBuilder {
                 ASTNode typeName = newExpression.getTypeName();
                 ASTContractDefinition contractTypeDefinition = null;
 
-                System.out.println("called: " + functionCall.getCalled().toSolidityCode());
-
                 if (!(typeName instanceof ASTUserDefinedTypeName)
                     || (contractTypeDefinition = ast.getContract(((ASTUserDefinedTypeName)typeName).getName())) == null) {
                     Console.error(functionCall, "Unexpected argument to 'new' - not a contract type: "
                             + ((ASTUserDefinedTypeName)typeName).getName());
                     Util.unimpl();
                 }
-
 
                 ArrayList<Expression> arguments = functionCall.getExpressionArguments(contractDefinition, environment);
                 result = new Expression(contractTypeDefinition, arguments);

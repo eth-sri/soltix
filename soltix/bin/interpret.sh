@@ -30,15 +30,24 @@ OUTPUT_EVENT_FILE_NAME="$CONTRACT_DIR/$OUTPUT_EVENT_FILE_NAME"
 
 INPUT_SOL_FILE_PATH="$CONTRACT_DIR/c0.sol"
 INPUT_TX_JSON_PATH="$CONTRACT_DIR/c0.tx-json"
+INPUT_TX_EXPR_PATH="$CONTRACT_DIR/c0.tx-expr"
 
 if ! test -f "$INPUT_SOL_FILE_PATH"; then
 	echo Expected input Solidity file "$INPUT_SOL_FILE_PATH" not found
 	exit 1
 fi
 
-if ! test -f "$INPUT_TX_JSON_PATH"; then
-	echo Expected input transactions JSON file "$INPUT_TX_JSON_PATH" not found
+if ! test -f "$INPUT_TX_JSON_PATH" && ! test -f "$INPUT_TX_EXPR_PATH"; then
+	echo Expected input transactions JSON or expr file "$INPUT_TX_JSON_PATH" / "$INPUT_TX_EXPR_PATH" not found
 	exit 1
+fi
+if test -f "$INPUT_TX_JSON_PATH" && test -f "$INPUT_TX_EXPR_PATH"; then
+	echo Warning: Have both transactions files "$INPUT_TX_JSON_PATH" and "$INPUT_TX_EXPR_PATH" - defaulting to "$INPUT_TX_EXPR_PATH"
+	INPUT_TX_FILE="$INPUT_TX_EXPR_PATH"
+elif test -f "$INPUT_TX_JSON_PATH"; then
+	INPUT_TX_FILE="$INPUT_TX_JSON_PATH"
+else
+	INPUT_TX_FILE="$INPUT_TX_EXPR_PATH"
 fi
 
 
@@ -48,6 +57,6 @@ if ! . "$SETTINGS"; then
 	exit 1
 fi
 
-run-soltix.sh "$INPUT_SOL_FILE_PATH" --solidityOutput="$OUTPUT_SOL_FILE_PATH" --interpret="$INPUT_TX_JSON_PATH"="$OUTPUT_EVENT_FILE_NAME"
+run-soltix.sh "$INPUT_SOL_FILE_PATH" --solidityOutput="$OUTPUT_SOL_FILE_PATH" --interpret="$INPUT_TX_FILE"="$OUTPUT_EVENT_FILE_NAME"
 
 

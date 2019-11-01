@@ -9,6 +9,7 @@ EVENTLOG="$1"/events.log
 
 rm -f "$EVENTLOG"
 
+# TODO fix all path dependencies here and in related scripts (../tools/stmt_..)
 if ../soltix/bin/interpret.sh "$1" && test -f "$EVENTLOG"; then
 	echo Event log: "$EVENTLOG" 
 	exit 0

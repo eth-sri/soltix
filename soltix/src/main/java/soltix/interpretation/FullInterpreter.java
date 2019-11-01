@@ -22,7 +22,10 @@ package soltix.interpretation;
 
 import org.json.simple.JSONArray;
 import soltix.Configuration;
+import soltix.Driver;
 import soltix.ast.*;
+import soltix.input.Parser;
+import soltix.input.ParserASTJSON;
 import soltix.interpretation.expressions.Expression;
 import soltix.interpretation.expressions.ExpressionBuilder;
 import soltix.interpretation.expressions.ExpressionEvaluationErrorHandler;
@@ -36,9 +39,11 @@ import soltix.synthesis.ValueGenerator;
 import soltix.util.JSONValueConverter;
 import soltix.util.RandomNumbers;
 import org.json.simple.JSONObject;
+import soltix.util.SystemTools;
 
-import java.io.FileWriter;
+import java.io.*;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Stack;
 
 // Full interpretation of transactions applied to contract functions.
@@ -50,6 +55,7 @@ public class FullInterpreter implements IInterpreterCallback {
     private AST ast;
     private ASTInterpreter astInterpreter;
     private JSONArray transactionsJSONArray;
+    private BufferedReader transactionsInputCodeReader;
     private ExpressionEvaluator expressionEvaluator;
     private ValueGenerator valueGenerator;
 
@@ -74,8 +80,9 @@ public class FullInterpreter implements IInterpreterCallback {
         public Value getReturnValue() { return returnValue; }
     }
 
-    public FullInterpreter(JSONArray transactionsArray) {
+    public FullInterpreter(JSONArray transactionsArray, BufferedReader transactionsInputCodeReader) {
         this.transactionsJSONArray = transactionsArray;
+        this.transactionsInputCodeReader = transactionsInputCodeReader;
         // TODO Supply proper error handler policy to ensure stability for preceding iterations
         expressionEvaluator = new ExpressionEvaluator(new ExpressionEvaluationErrorHandler(new RandomNumbers(Configuration.randomNumbersSeed)), this);
     }
@@ -127,6 +134,16 @@ public class FullInterpreter implements IInterpreterCallback {
     public void run() throws Exception {
         createGlobalEnvironment();
 
+        if (transactionsJSONArray != null) {
+            runJSONTransactions();
+        } else {
+            runInputCodeStream();
+        }
+
+        globalInterpreterEnvironment = null;
+    }
+
+    protected void runJSONTransactions() throws Exception {
         if (transactionsJSONArray.size() == 0) {
             throw new Exception("Empty transactions list");
         }
@@ -156,7 +173,124 @@ public class FullInterpreter implements IInterpreterCallback {
                 // TODO use result
             }
         }
-        globalInterpreterEnvironment = null;
+    }
+
+    // The external solc binary is currently used to parse expression input in the same way that the entire contract
+    // is parsed (we will want to have our own internal parser later, but it is easier to get up and running with solc
+    // for now, and keeping the external variant as an option may be desirable long-term as well).
+    //
+    // For some input expression "expr;" an input program:
+    //
+    //    contract a {
+    //        function() {
+    //           ...
+    //    }
+    //    contract b {
+    //           ...
+    //
+    // We prepare by saving a reduced version that preserves all declarations and type info, but strips superfluous
+    // code for performance reasons. The expression to be parsed will be subsequently injected within a new dummy
+    // contract __i. Expression lists for parsing must be append-only to ensure that declarations remain in place.
+    //
+    //     contract a {
+    //         function() { /* empty */ }
+    //     }
+    //     contract b { ... }
+    //     contract __i {
+    //         function __input() {  expr ; }
+    //     }
+    private final String tempSolidityFileUnreduced = "__unreduced.sol";
+    private final String tempSolidityFileReduced = "__reduced.sol";
+    private final String tempSolidityFileInjected = "__injected.ast";
+    private final String tempExprFile = "__expr.sol";
+    private final String markerFunctionName = "__MARKER";
+    private ContractValue dummyInterpreterContractValue = null;
+
+
+    protected void prepareExternalCodeParsing() throws Exception {
+
+        Driver.writeSolidityOutput(ast, null, tempSolidityFileUnreduced);
+        if (!SystemTools.runCommand("stmt-injection-prepare.sh " + tempSolidityFileUnreduced + " " + tempSolidityFileReduced)) {
+            throw new Exception("prepareExternalCodeParsing failed to prepare interpretation environment");
+        }
+    }
+
+    protected ArrayList<ASTNode> parseExternally(String code) throws Exception {
+        BufferedWriter bufferedWriter = null;
+        try {
+            bufferedWriter = new BufferedWriter(new FileWriter(tempExprFile));
+            bufferedWriter.write(code);
+            bufferedWriter.close();
+        } catch (Exception e) {
+            throw new Exception("parseExternally failed to write file " + tempExprFile + ": " + e.toString());
+        }
+        if (!SystemTools.runCommand("stmt-injection-run.sh " +
+                tempSolidityFileReduced + " " + tempSolidityFileInjected + " " + tempExprFile)) {
+            throw new Exception("prepareExternalCodeParsing failed to prepare interpretation environment");
+        }
+
+        Parser parser = new ParserASTJSON();
+        FileInputStream inputStream = new FileInputStream(tempSolidityFileInjected);
+        AST injectedAST = parser.parse(inputStream);
+        inputStream.close();
+
+        ASTContractDefinition dummyContract = injectedAST.getContract("__i");
+        if (dummyContract == null) {
+            throw new Exception("parseExternally cannot find interpreter contract __i");
+        }
+        if (dummyInterpreterContractValue == null) {
+            // This will be needed later to provide a variable environment
+            dummyInterpreterContractValue = interpretNewExpression(dummyContract, null);
+        }
+        ASTFunctionDefinition dummyFunction = dummyContract.getFunction("__input");
+        if (dummyFunction == null) {
+            throw new Exception("parseExternally cannot find interpreter function __i.__input()");
+        }
+        ASTBlock dummyFunctionBody = dummyFunction.getBody();
+        ArrayList<ASTNode> executableCode = null;
+        for (ASTNode node : dummyFunctionBody.getChildren()) {
+            //System.out.println(" got " + node.toSolidityCode() + " type " + node.getClass().getName());
+            if (executableCode != null) {
+                executableCode.add(node);
+            } else if (node instanceof ASTExpressionStatement) {
+                ASTExpressionStatement expressionStatement = (ASTExpressionStatement) node;
+                if (expressionStatement.getBody() instanceof ASTFunctionCall) {
+                    ASTFunctionCall functionCall = (ASTFunctionCall) expressionStatement.getBody();
+                    if (functionCall.getCalled() instanceof ASTIdentifier) {
+                        if ((((ASTIdentifier) functionCall.getCalled()).getName().equals(markerFunctionName))) {
+                            // Start recording
+                            executableCode = new ArrayList<ASTNode>();
+                        }
+                    }
+                }
+
+            }
+        }
+
+        return executableCode;
+    }
+
+    protected void runInputCodeStream() throws Exception {
+        String inputCode;
+        String previousInputCode = "";
+
+        prepareExternalCodeParsing();
+
+        while ((inputCode = transactionsInputCodeReader.readLine()) != null) {
+            // Read any other currently available lines - loads file-based stream into one block
+            while (transactionsInputCodeReader.ready()) {
+                inputCode += "\n" + transactionsInputCodeReader.readLine();
+            }
+
+            ArrayList<ASTNode> parsedStatementList = parseExternally(previousInputCode + markerFunctionName + "();" + inputCode);
+            if (parsedStatementList != null) {
+                for (ASTNode node: parsedStatementList) {
+                    currentContractValueContext = dummyInterpreterContractValue; // TODO remove this
+                    interpretNode(node);
+                }
+            }
+            previousInputCode += inputCode;
+        }
     }
 
 
@@ -164,18 +298,10 @@ public class FullInterpreter implements IInterpreterCallback {
     protected SolidityStackFrame currentStackFrame() { return callStack.empty()? null: callStack.peek(); }
 
     public Value interpretTransaction(Transaction transaction) throws Exception {
-
-       // Value result = interpretNode();
-
         ASTFunctionDefinition calledFunction = transaction.getFunction();
         calledFunction.setInterpretationArguments(transaction.getArguments());
-        //Value result = interpretFunctionCall(transaction.getFunction(), transaction.getArguments());
-        Value result = interpretNode(transaction.getFunction());
 
-                /*
-        uninitializeLocalFunctionEnvironment(stackFrame, transaction.getFunction()); //transaction);
-        callStack.pop();
-        */
+        Value result = interpretNode(transaction.getFunction());
 
         return result;
     }
@@ -183,8 +309,6 @@ public class FullInterpreter implements IInterpreterCallback {
 
 
     private VariableEnvironment globalInterpreterEnvironment;
-   // private boolean initializedGlobalEnvironment = false;
-
 
     protected void createGlobalEnvironment() throws Exception {
         // Prepare variable environment, which will hold a single, continuously updated value set while synthesizing
@@ -233,15 +357,19 @@ public class FullInterpreter implements IInterpreterCallback {
             contractValue.getInterpretationEnvironment().addVariableValues(variable, variableValues);
         }
 
-        // Add "this" variable TODO make it immutable, and function value variables too
-        ASTVariableDeclaration thisDeclaration = new ASTVariableDeclaration(0, "this",
-                "contract", "storage", "internal", true, false);
-        thisDeclaration.addChildNode(new ASTUserDefinedTypeName(0, currentContract.getName()));
-        thisDeclaration.finalize();
-        Variable thisVariable = new Variable(thisDeclaration);
-        VariableValues thisValues = new VariableValues(thisVariable, 0);
-        thisValues.addValue(contractValue);
-        contractValue.getInterpretationEnvironment().addVariableValues(thisVariable, thisValues);
+        if (!currentContract.getName().equals("__i")) { // workaround for __i special contract crash here - this not needed anyway
+            // Add "this" variable TODO make it immutable, and function value variables too
+            ASTVariableDeclaration thisDeclaration = new ASTVariableDeclaration(0, "this",
+                    "contract", "storage", "internal", true, false);
+            thisDeclaration.addChildNode(new ASTUserDefinedTypeName(0, currentContract.getName()));
+            thisDeclaration.finalize();
+            Variable thisVariable = new Variable(thisDeclaration);
+            VariableValues thisValues = new VariableValues(thisVariable, 0);
+            thisValues.addValue(contractValue);
+            contractValue.getInterpretationEnvironment().addVariableValues(thisVariable, thisValues);
+        }
+
+
     }
 
     protected void initializeLocalFunctionEnvironment(SolidityStackFrame stackFrame,
@@ -259,6 +387,7 @@ public class FullInterpreter implements IInterpreterCallback {
            // stackFrame.getScope().enterNode(parameter, transaction.getArguments().get(i));
             parameter.setInitializerValue(/*transaction.getArguments()*/ arguments.get(i));
         }
+
     }
 
     protected void uninitializeLocalFunctionEnvironment(SolidityStackFrame stackFrame,
@@ -268,6 +397,7 @@ public class FullInterpreter implements IInterpreterCallback {
             ASTVariableDeclaration parameter = parameterList.get(i);
             stackFrame.getScope().leaveNode(parameter);
         }
+
     }
 
 
@@ -476,10 +606,11 @@ public class FullInterpreter implements IInterpreterCallback {
         // TODO store globalEnvironment in ContractValue, retrieve it from there
 
         VariableEnvironment currentVariableEnvironment =
-                currentStackFrame() != null? currentStackFrame().getScope().getVariableEnvironment(): currentContractValueContext.getInterpretationEnvironment() /*TODO*/; // globalEnvironment;
+                currentStackFrame() != null?
+                        currentStackFrame().getScope().getVariableEnvironment():
+                            currentContractValueContext.getInterpretationEnvironment() /*TODO*/; // globalEnvironment;
         ASTContractDefinition currentContract =
                 currentStackFrame() != null? currentStackFrame().getContract(): currentContractValueContext.getContractDefinition();
-
 
         Expression expression = ExpressionBuilder.fromASTNode(ast,
                                                               currentContract,
