@@ -1,7 +1,5 @@
 #!/bin/sh
 
-echo run with "$@" >/tmp/fooooooooooooo
-
 if test "$#" != 2; then
 	echo "Usage:  stmt-injection-prepare input-file.sol output-file.sol"
 	exit 1

@@ -47,10 +47,16 @@ public class SolidityStackFrame {
         this.contract = contract;
         this.function = function;
         this.arguments = arguments;
-        scope = new Scope(contract, interpreter);
+        scope = createScope(ast, contract, interpreter, globalVariableEnvironment);
+    }
+
+    static public Scope createScope(AST ast, ASTContractDefinition contract, FullInterpreter interpreter,
+                                    VariableEnvironment parentVariableEnvironment) throws Exception {
+        Scope scope = new Scope(contract, interpreter);
         VariableEnvironment localVariableEnvironment = new VariableEnvironment(ast, true);
-        localVariableEnvironment.setParentVariableEnvironment(globalVariableEnvironment); // TODO better approach?
+        localVariableEnvironment.setParentVariableEnvironment(parentVariableEnvironment); // TODO better approach?
         scope.setVariableEnvironment(localVariableEnvironment);
+        return scope;
     }
 
     public ASTContractDefinition getContract() { return contract; }

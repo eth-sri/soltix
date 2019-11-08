@@ -129,7 +129,7 @@ public class FullInterpreter implements IInterpreterCallback {
     }
 
 
-    private ContractValue currentContractValueContext = null;
+    public ContractValue currentContractValueContext = null; // TODO not public
 
     public void run() throws Exception {
         createGlobalEnvironment();
@@ -205,6 +205,7 @@ public class FullInterpreter implements IInterpreterCallback {
     private final String tempExprFile = "__expr.sol";
     private final String markerFunctionName = "__MARKER";
     private ContractValue dummyInterpreterContractValue = null;
+    private Scope dummyStatementScope = null;
 
 
     protected void prepareExternalCodeParsing() throws Exception {
@@ -241,6 +242,10 @@ public class FullInterpreter implements IInterpreterCallback {
         if (dummyInterpreterContractValue == null) {
             // This will be needed later to provide a variable environment
             dummyInterpreterContractValue = interpretNewExpression(dummyContract, null);
+            // Set up nasty ad-hoc Scope that can also be used to record variables
+            dummyStatementScope = SolidityStackFrame.createScope(ast, dummyContract,this, null);
+            // Allow lookups in ad-hoc global environment
+            dummyInterpreterContractValue.getInterpretationEnvironment().setParentVariableEnvironment(dummyStatementScope.getVariableEnvironment());
         }
         ASTFunctionDefinition dummyFunction = dummyContract.getFunction("__input");
         if (dummyFunction == null) {
@@ -435,11 +440,9 @@ public class FullInterpreter implements IInterpreterCallback {
         return value;
     }
 
-
-
     public Value interpretNode(ASTNode currentNode) throws Exception {
         ast.setCurrentNode(currentNode);
-        Scope currentScope = currentStackFrame() != null? currentStackFrame().getScope(): null;
+        Scope currentScope = currentStackFrame() != null? currentStackFrame().getScope(): dummyStatementScope;
 
         currentNode.setCovered(true);
 
@@ -486,6 +489,7 @@ public class FullInterpreter implements IInterpreterCallback {
                 || currentNode instanceof ASTFunctionCall
                 || currentNode instanceof ASTBinaryOperation
                 || currentNode instanceof ASTTupleExpression
+                || currentNode instanceof ASTMemberAccess
                 || currentNode instanceof ASTNewExpression) {
             returnValue = interpretExpression(currentNode);
         } else {
@@ -504,7 +508,6 @@ public class FullInterpreter implements IInterpreterCallback {
 
     protected Value interpretFunctionCall(ASTFunctionDefinition functionDefinition,
                                           ArrayList<Value> arguments) throws Exception {
-
 
         // Set up stack frame
         SolidityStackFrame stackFrame = new SolidityStackFrame(functionDefinition.getContract(),
