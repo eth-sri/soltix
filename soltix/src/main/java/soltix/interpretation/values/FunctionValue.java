@@ -31,11 +31,16 @@ public class FunctionValue extends Value {
     private ASTNode type;
     private ASTContractDefinition contractDefinition;
     private ASTFunctionDefinition functionDefinition;
+    private ContractValue contractValueContext;
 
-    public FunctionValue(ASTContractDefinition contractDefinition, ASTFunctionDefinition functionDefinition, ASTNode type) {
+    public FunctionValue(ASTContractDefinition contractDefinition,
+                         ASTFunctionDefinition functionDefinition,
+                         ASTNode type,
+                         ContractValue contractValueContext) {
         this.type = type;
         this.contractDefinition = contractDefinition;
         this.functionDefinition = functionDefinition;
+        this.contractValueContext = contractValueContext;
     }
 
     public ASTContractDefinition getContractDefinition() {
@@ -45,6 +50,8 @@ public class FunctionValue extends Value {
     public ASTFunctionDefinition getFunctionDefinition() {
         return functionDefinition;
     }
+
+    public ContractValue getContractValueContext() { return contractValueContext; }
 
     @Override
     public ASTNode getType() { return type; }

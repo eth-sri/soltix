@@ -20,6 +20,7 @@
 package soltix.ast;
 
 import soltix.interpretation.expressions.ExpressionBuilder;
+import soltix.interpretation.values.ContractValue;
 import soltix.interpretation.variables.VariableEnvironment;
 import soltix.util.Util;
 
@@ -128,6 +129,7 @@ public class ASTTupleExpression extends ASTNode {
     }
 
     public ArrayList<ASTNode> getTypeList(ASTContractDefinition contractDefinition,
+                                          ContractValue contractValueContext,
                                           VariableEnvironment environment) throws Exception {
         // TODO Fix this not to compute things here but use the type field and properly handle holes.
         // We should probably model tuple types more appropriately as well
@@ -137,7 +139,7 @@ public class ASTTupleExpression extends ASTNode {
         }
         ArrayList<ASTNode> result = new ArrayList<ASTNode>();
         for (ASTNode component : tupleItems) {
-            result.add(ExpressionBuilder.fromASTNode(ast, contractDefinition, environment, component).getType());
+            result.add(ExpressionBuilder.fromASTNode(ast, contractDefinition, contractValueContext, environment, component).getType());
         }
         return result;
     }

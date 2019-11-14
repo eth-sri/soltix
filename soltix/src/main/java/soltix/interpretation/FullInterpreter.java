@@ -128,9 +128,6 @@ public class FullInterpreter implements IInterpreterCallback {
         throw new Exception("Invalid call to FullInterpreter.visitNodeBeforeProcessing");
     }
 
-
-    public ContractValue currentContractValueContext = null; // TODO not public
-
     public void run() throws Exception {
         createGlobalEnvironment();
 
@@ -151,7 +148,7 @@ public class FullInterpreter implements IInterpreterCallback {
         for (int i = 0; i < transactionsJSONArray.size(); ++i) {
             Transaction transaction = new Transaction(ast, (JSONObject) transactionsJSONArray.get(i), globalInterpreterEnvironment);
             if (transaction.getIsConstruction()) {
-                currentContractValueContext = interpretNewExpression(transaction.getContract(), transaction.getArguments() /* TODO evaluatable args */);
+                ContractValue currentContractValueContext = interpretNewExpression(transaction.getContract(), transaction.getArguments() /* TODO evaluatable args */);
 
                 ASTVariableDeclaration contractVariableDeclaration = new ASTVariableDeclaration(0, transaction.getContractObjectName(),
                         "contract", "storage", "internal", false, false);
@@ -168,8 +165,8 @@ public class FullInterpreter implements IInterpreterCallback {
                     throw new Exception("FullInterpreter.run: transaction uses non-contract object " + transaction.getContractObjectName());
                 }
 
-                currentContractValueContext = (ContractValue)variableValue; // TODO proper value propagation, this will break sooner or later
-                Value result = interpretTransaction(transaction);
+                ContractValue currentContractValueContext = (ContractValue)variableValue; // TODO proper value propagation, this will break sooner or later
+                Value result = interpretTransaction(currentContractValueContext, transaction);
                 // TODO use result
             }
         }
@@ -290,8 +287,8 @@ public class FullInterpreter implements IInterpreterCallback {
             ArrayList<ASTNode> parsedStatementList = parseExternally(previousInputCode + markerFunctionName + "();" + inputCode);
             if (parsedStatementList != null) {
                 for (ASTNode node: parsedStatementList) {
-                    currentContractValueContext = dummyInterpreterContractValue; // TODO remove this
-                    interpretNode(node);
+                    ContractValue currentContractValueContext = dummyInterpreterContractValue; // TODO remove this
+                    interpretNode(currentContractValueContext, node);
                 }
             }
             previousInputCode += inputCode;
@@ -302,11 +299,11 @@ public class FullInterpreter implements IInterpreterCallback {
     private Stack<SolidityStackFrame> callStack = new Stack<SolidityStackFrame>();
     protected SolidityStackFrame currentStackFrame() { return callStack.empty()? null: callStack.peek(); }
 
-    public Value interpretTransaction(Transaction transaction) throws Exception {
+    public Value interpretTransaction(ContractValue contractValueContext, Transaction transaction) throws Exception {
         ASTFunctionDefinition calledFunction = transaction.getFunction();
         calledFunction.setInterpretationArguments(transaction.getArguments());
 
-        Value result = interpretNode(transaction.getFunction());
+        Value result = interpretNode(contractValueContext, transaction.getFunction());
 
         return result;
     }
@@ -335,7 +332,7 @@ public class FullInterpreter implements IInterpreterCallback {
             if (initializerValue == null) {
                 ASTNode initializerCode = variableDeclaration.getInitializer();
                 if (initializerCode != null) {
-                    initializerValue = interpretNode(initializerCode);
+                    initializerValue = interpretNode(contractValue, initializerCode);
                 }
 
                 if (initializerValue == null) {
@@ -357,7 +354,7 @@ public class FullInterpreter implements IInterpreterCallback {
         for (ASTFunctionDefinition function : currentContract.getFunctions()) {
             Variable variable = new Variable(function);
             VariableValues variableValues = new VariableValues(variable, 0);
-            FunctionValue value = new FunctionValue(currentContract, function, function.getFunctionType());
+            FunctionValue value = new FunctionValue(currentContract, function, function.getFunctionType(), contractValue);
             variableValues.addValue(value);
             contractValue.getInterpretationEnvironment().addVariableValues(variable, variableValues);
         }
@@ -411,9 +408,6 @@ public class FullInterpreter implements IInterpreterCallback {
                                                 ArrayList<Value> arguments) throws Exception {
         ContractValue value = new ContractValue(contractType);
 
-        currentContractValueContext = value; // assign here to resolve another circular reference when evaluating
-                                             // initializers. TODO fix this, maybe pass proper context objects where needed
-
         VariableEnvironment environment = new VariableEnvironment(ast, true);
         //if (!initializedGlobalEnvironment) {
             // Due to expression evaluation for initializers requiring a variable environment and potentially other
@@ -435,12 +429,12 @@ public class FullInterpreter implements IInterpreterCallback {
         ASTFunctionDefinition constructor = contractType.getConstructor();
         if (constructor != null) {
             constructor.setInterpretationArguments(arguments);
-            interpretNode(constructor);
+            interpretNode(value, constructor);
         }
         return value;
     }
 
-    public Value interpretNode(ASTNode currentNode) throws Exception {
+    public Value interpretNode(ContractValue contractValueContext, ASTNode currentNode) throws Exception {
         ast.setCurrentNode(currentNode);
         Scope currentScope = currentStackFrame() != null? currentStackFrame().getScope(): dummyStatementScope;
 
@@ -452,7 +446,7 @@ public class FullInterpreter implements IInterpreterCallback {
         // The first interpreted node must be a function definition to ensure that a stack + scope exists.
         if (!(currentNode instanceof ASTFunctionDefinition)) {
             if (currentScope != null) { // may still be null during storage initializer evaluation
-                currentScope.enterNode(currentNode, null); // TODO initializer?
+                currentScope.enterNode(contractValueContext, currentNode, null); // TODO initializer?
             }
         }
 
@@ -460,29 +454,29 @@ public class FullInterpreter implements IInterpreterCallback {
 
         if (currentNode instanceof ASTFunctionDefinition) {
             ASTFunctionDefinition functionDefinition = (ASTFunctionDefinition) currentNode;
-            returnValue = interpretFunctionCall(functionDefinition, functionDefinition.getInterpretationArguments());
+            returnValue = interpretFunctionCall(contractValueContext, functionDefinition, functionDefinition.getInterpretationArguments());
         } else if (currentNode instanceof ASTBlock) {
-            returnValue = interpretBlock((ASTBlock)currentNode);
+            returnValue = interpretBlock(contractValueContext, (ASTBlock)currentNode);
         } else if (currentNode instanceof ASTVariableDeclarationStatement) {
             ; // This is already processed by currentScope.enterNode(). TODO move initializer processing here?
         } else if (currentNode instanceof ASTEmitStatement) {
-            interpretEmitStatement((ASTEmitStatement) currentNode);
+            interpretEmitStatement(contractValueContext, (ASTEmitStatement) currentNode);
         } else if (currentNode instanceof ASTReturnStatement) {
-            interpretReturnStatement((ASTReturnStatement) currentNode);
+            interpretReturnStatement(contractValueContext, (ASTReturnStatement) currentNode);
         } else if (currentNode instanceof  ASTIfStatement) {
-            interpretIfStatement((ASTIfStatement) currentNode);
+            interpretIfStatement(contractValueContext, (ASTIfStatement) currentNode);
         } else if (currentNode instanceof ASTWhileStatement) {
-            interpretWhileStatement((ASTWhileStatement) currentNode);
+            interpretWhileStatement(contractValueContext, (ASTWhileStatement) currentNode);
         } else if (currentNode instanceof ASTDoWhileStatement) {
-            interpretDoWhileStatement((ASTDoWhileStatement) currentNode);
+            interpretDoWhileStatement(contractValueContext, (ASTDoWhileStatement) currentNode);
         } else if (currentNode instanceof ASTForStatement) {
-            interpretForStatement((ASTForStatement) currentNode);
+            interpretForStatement(contractValueContext, (ASTForStatement) currentNode);
         } else if (currentNode instanceof ASTBreakStatement) {
             interpretBreakStatement((ASTBreakStatement) currentNode);
         } else if (currentNode instanceof ASTContinueStatement) {
             interpretContinueStatement((ASTContinueStatement) currentNode);
         } else if (currentNode instanceof ASTExpressionStatement) {
-            interpretExpressionStatement((ASTExpressionStatement) currentNode);
+            interpretExpressionStatement(contractValueContext, (ASTExpressionStatement) currentNode);
         //} else if (currentNode instanceof ASTNewExpression) {
             //returnValue = interpretNewExpression((ASTNewExpression)currentNode);
         } else if (currentNode instanceof ASTLiteral
@@ -491,7 +485,7 @@ public class FullInterpreter implements IInterpreterCallback {
                 || currentNode instanceof ASTTupleExpression
                 || currentNode instanceof ASTMemberAccess
                 || currentNode instanceof ASTNewExpression) {
-            returnValue = interpretExpression(currentNode);
+            returnValue = interpretExpression(contractValueContext, currentNode);
         } else {
             throw new Exception("FullInterpreter.interpretNode for unimplemented node type "
                     + currentNode.getClass().toString()
@@ -506,20 +500,21 @@ public class FullInterpreter implements IInterpreterCallback {
 
 
 
-    protected Value interpretFunctionCall(ASTFunctionDefinition functionDefinition,
+    protected Value interpretFunctionCall(ContractValue contractValueContext,
+                                          ASTFunctionDefinition functionDefinition,
                                           ArrayList<Value> arguments) throws Exception {
 
         // Set up stack frame
         SolidityStackFrame stackFrame = new SolidityStackFrame(functionDefinition.getContract(),
                 functionDefinition,
-                currentContractValueContext.getInterpretationEnvironment(), /*TODO*/    /*globalEnvironment,*/ // global env is always the fallback, otherwise we would run into local vars clashes
+                 contractValueContext.getInterpretationEnvironment(), /*TODO*/    /*globalEnvironment,*/ // global env is always the fallback, otherwise we would run into local vars clashes
                 this,
                 arguments,
                 ast);
 
 
 
-        stackFrame.getScope().enterNode(functionDefinition, null);
+        stackFrame.getScope().enterNode(contractValueContext, functionDefinition, null);
         callStack.push(stackFrame);
         ast.setCurrentNode(functionDefinition);
 
@@ -545,7 +540,7 @@ public class FullInterpreter implements IInterpreterCallback {
         Value result = null;
 
         try {
-            interpretNode(functionDefinition.getBody());
+            interpretNode(contractValueContext, functionDefinition.getBody());
         } catch (ReturnException exception) {
             result = exception.getReturnValue();
         }
@@ -557,15 +552,15 @@ public class FullInterpreter implements IInterpreterCallback {
         return result;
     }
 
-    protected Value interpretBlock(ASTBlock block) throws Exception {
-        return interpretChildNodes(block);
+    protected Value interpretBlock(ContractValue contractValueContext, ASTBlock block) throws Exception {
+        return interpretChildNodes(contractValueContext, block);
     }
 
     // Depth-first child node traversal for all paths
-    protected Value interpretChildNodes(ASTNode currentNode) throws Exception {
+    protected Value interpretChildNodes(ContractValue contractValueContext, ASTNode currentNode) throws Exception {
         Value result = null;
         for (int i = 0; i < currentNode.getChildCount(); ++i) {
-            result = interpretNode(currentNode.getChild(i));
+            result = interpretNode(contractValueContext, currentNode.getChild(i));
             if (currentStackFrame().getHaveReturnValue()) {
                 // Have return value (null if "empty"/"void")- stop
                 result = currentStackFrame().getReturnValue();
@@ -576,7 +571,7 @@ public class FullInterpreter implements IInterpreterCallback {
     }
 
 
-    protected void interpretEmitStatement(ASTEmitStatement emitStatement) throws Exception {
+    protected void interpretEmitStatement(ContractValue contractValueContext, ASTEmitStatement emitStatement) throws Exception {
         JSONObject eventObject = new JSONObject();
         eventObject.put("event", emitStatement.getName());
         emittedEventsJSONObjectList.add(eventObject);
@@ -586,7 +581,9 @@ public class FullInterpreter implements IInterpreterCallback {
         // Evaluate arguments
         ASTFunctionCall functionCall = emitStatement.getFunctionCall();
         VariableEnvironment currentVariableEnvironment = currentStackFrame().getScope().getVariableEnvironment();
-        ArrayList<Expression> arguments = functionCall.getExpressionArguments(currentStackFrame().getContract(), currentVariableEnvironment);
+        ArrayList<Expression> arguments = functionCall.getExpressionArguments(currentStackFrame().getContract(),
+                                                                              contractValueContext,
+                                                                              currentVariableEnvironment);
 
         ASTEventDefinition eventDefinition = currentStackFrame().getContract().getEventDefinition(emitStatement.getName());
         ArrayList<ASTVariableDeclaration> eventParameters = eventDefinition.getParameterList().toArrayList();
@@ -600,40 +597,43 @@ public class FullInterpreter implements IInterpreterCallback {
         eventObject.put("args", argsObject);
     }
 
-    protected Value interpretExpressionStatement(ASTExpressionStatement statement) throws Exception {
-        return interpretExpression(statement.getBody());
+    protected Value interpretExpressionStatement(ContractValue contractValueContext, ASTExpressionStatement statement) throws Exception {
+        return interpretExpression(contractValueContext, statement.getBody());
     }
 
-    protected Value interpretExpression(ASTNode node) throws Exception {
+    protected Value interpretExpression(ContractValue contractValueContext, ASTNode node) throws Exception {
         // There may be no stack frame when we're evaluating things while initializing a contract object
         // TODO store globalEnvironment in ContractValue, retrieve it from there
 
         VariableEnvironment currentVariableEnvironment =
                 currentStackFrame() != null?
                         currentStackFrame().getScope().getVariableEnvironment():
-                            currentContractValueContext.getInterpretationEnvironment() /*TODO*/; // globalEnvironment;
+                        contractValueContext.getInterpretationEnvironment() /*TODO*/; // globalEnvironment;
         ASTContractDefinition currentContract =
-                currentStackFrame() != null? currentStackFrame().getContract(): currentContractValueContext.getContractDefinition();
+                currentStackFrame() != null? currentStackFrame().getContract(): contractValueContext.getContractDefinition();
 
         Expression expression = ExpressionBuilder.fromASTNode(ast,
                                                               currentContract,
+                                                              contractValueContext,
                                                               currentVariableEnvironment,
                                                               node);
         Value result = expressionEvaluator.evaluateForAll(currentVariableEnvironment,
                 ExpressionBuilder.fromASTNode(ast,
                         currentContract,
+                        contractValueContext,
                         currentVariableEnvironment,
                         node)).values.get(0);
         return result;
     }
 
-    protected void interpretReturnStatement(ASTReturnStatement returnStatement) throws Exception {
+    protected void interpretReturnStatement(ContractValue contractValueContext, ASTReturnStatement returnStatement) throws Exception {
         // Evaluate argument, if any
         if (returnStatement.getArgument() != null) {
             VariableEnvironment currentVariableEnvironment = currentStackFrame().getScope().getVariableEnvironment();
             Value result = expressionEvaluator.evaluateForAll(currentVariableEnvironment,
                     ExpressionBuilder.fromASTNode(ast,
                             currentStackFrame().getContract(),
+                            contractValueContext,
                             currentVariableEnvironment,
                             returnStatement.getArgument())).values.get(0);
 
@@ -646,10 +646,10 @@ public class FullInterpreter implements IInterpreterCallback {
                 currentStackFrame().getReturnValue());
     }
 
-    protected void interpretIfStatement(ASTIfStatement ifStatement) throws Exception {
+    protected void interpretIfStatement(ContractValue contractValueContext, ASTIfStatement ifStatement) throws Exception {
         // Interpret condition
         VariableEnvironment currentVariableEnvironment = currentStackFrame().getScope().getVariableEnvironment();
-        Value result = interpretNode(ifStatement.getCondition());/*expressionEvaluator.evaluateForAll(currentVariableEnvironment,
+        Value result = interpretNode(contractValueContext, ifStatement.getCondition());/*expressionEvaluator.evaluateForAll(currentVariableEnvironment,
                 ExpressionBuilder.fromASTNode(currentStackFrame().getContract(),
                         currentVariableEnvironment,
                         ifStatement.getCondition())).values.get(0);*/
@@ -658,16 +658,16 @@ public class FullInterpreter implements IInterpreterCallback {
 
         // Interpret body
         if (((BoolValue) result).getValue() == true) {
-            interpretNode(ifStatement.getIfBranch());
+            interpretNode(contractValueContext, ifStatement.getIfBranch());
         } else if (ifStatement.getElseBranch() != null) {
-            interpretNode(ifStatement.getElseBranch());
+            interpretNode(contractValueContext, ifStatement.getElseBranch());
         }
     }
 
-    protected void interpretWhileStatement(ASTWhileStatement whileStatement) throws Exception {
+    protected void interpretWhileStatement(ContractValue contractValueContext, ASTWhileStatement whileStatement) throws Exception {
         for (;;) {
             // Interpret condition
-            Value result = interpretNode(whileStatement.getCondition());
+            Value result = interpretNode(contractValueContext, whileStatement.getCondition());
 
             if (!(result instanceof BoolValue)) {
                 Console.error(whileStatement, "Unexpected while condition type - not bool for "
@@ -678,7 +678,7 @@ public class FullInterpreter implements IInterpreterCallback {
             // Interpret body
             if (((BoolValue) result).getValue() == true) {
                 try {
-                    interpretNode(whileStatement.getBody());
+                    interpretNode(contractValueContext, whileStatement.getBody());
                 } catch (BreakException breakException) {
                     break;
                 } catch (ContinueException continueException) {
@@ -690,15 +690,15 @@ public class FullInterpreter implements IInterpreterCallback {
         }
     }
 
-    protected void interpretForStatement(ASTForStatement forStatement) throws Exception {
+    protected void interpretForStatement(ContractValue contractValueContext, ASTForStatement forStatement) throws Exception {
         if (forStatement.getInitPart() != null) {
             // Interpret initializer part
-            interpretNode(forStatement.getInitPart());
+            interpretNode(contractValueContext, forStatement.getInitPart());
         }
 
         for (;;) {
             // Interpret condition
-            Value result = interpretNode(forStatement.getCondPart());
+            Value result = interpretNode(contractValueContext, forStatement.getCondPart());
 
             if (!(result instanceof BoolValue)) {
                 Console.error(forStatement, "Unexpected for condition type - not bool for "
@@ -709,7 +709,7 @@ public class FullInterpreter implements IInterpreterCallback {
             // Interpret body
             if (((BoolValue) result).getValue() == true) {
                 try {
-                    interpretNode(forStatement.getBody());
+                    interpretNode(contractValueContext, forStatement.getBody());
                 } catch (BreakException breakException) {
                     break;
                 } catch (ContinueException continueException) {
@@ -720,15 +720,16 @@ public class FullInterpreter implements IInterpreterCallback {
             }
 
             // Interpret post-body statement
-            interpretNode(forStatement.getLoopPart());
+            interpretNode(contractValueContext, forStatement.getLoopPart());
         }
     }
 
-    protected void interpretDoWhileStatement(ASTDoWhileStatement doWhileStatement) throws Exception {
+    protected void interpretDoWhileStatement(ContractValue contractValueContext,
+                                             ASTDoWhileStatement doWhileStatement) throws Exception {
         for (;;) {
             // Interpret loop body
             try {
-                interpretNode(doWhileStatement.getBody());
+                interpretNode(contractValueContext, doWhileStatement.getBody());
             } catch (BreakException breakException) {
                 break;
             } catch (ContinueException continueException) {
@@ -736,7 +737,7 @@ public class FullInterpreter implements IInterpreterCallback {
             }
 
             // Interpet condition
-            Value result = interpretNode(doWhileStatement.getCondition());
+            Value result = interpretNode(contractValueContext, doWhileStatement.getCondition());
 
             if (!(result instanceof BoolValue)) {
                 Console.error(doWhileStatement, "Unexpected do-while condition type - not bool for "

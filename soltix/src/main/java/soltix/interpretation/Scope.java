@@ -24,6 +24,7 @@ import soltix.Configuration;
 import soltix.ast.*;
 import soltix.interpretation.expressions.Expression;
 import soltix.interpretation.expressions.ExpressionBuilder;
+import soltix.interpretation.values.ContractValue;
 import soltix.interpretation.values.Value;
 import soltix.interpretation.values.ValueContainer;
 import soltix.interpretation.variables.*;
@@ -140,7 +141,9 @@ public class Scope {
         }
     }
 
-    private Value getInitializer(ASTNode node, FullInterpreter interpreterCallback) throws Exception {
+    private Value getInitializer(ContractValue contractValueContext,
+                                 ASTNode node,
+                                 FullInterpreter interpreterCallback) throws Exception {
         if (node instanceof  ASTVariableDeclaration) {
             return ((ASTVariableDeclaration)node).getInitializerValue();
         } else if (node instanceof  ASTVariableDeclarationStatement) {
@@ -148,7 +151,7 @@ public class Scope {
                 // Evaluate initializer expression
                 ASTNode initializerCode = ((ASTVariableDeclarationStatement) node).getInitializer();
                 if (initializerCode != null) {
-                    Value initializerValue = interpreterCallback.interpretNode(initializerCode);
+                    Value initializerValue = interpreterCallback.interpretNode(contractValueContext, initializerCode);
                     return initializerValue;
                 } else {
                     return null;
@@ -161,14 +164,14 @@ public class Scope {
         }
     }
 
-    public void enterNode(ASTNode node, Value initializer) throws Exception {
+    public void enterNode(ContractValue contractValueContext, ASTNode node, Value initializer) throws Exception {
         if (variablesById.containsKey(node.getID())) {
             throw new Exception("AST node " + node.getID() + " already contained in scope");
         }
         if (node instanceof ASTVariableDeclaration) {
-            addVariableToScope(node, getInitializer(node, interpreterCallback)); //);
+            addVariableToScope(node, getInitializer(contractValueContext, node, interpreterCallback)); //);
         } else if (node instanceof ASTVariableDeclarationStatement) {
-            addVariableToScope(node, getInitializer(node, interpreterCallback)); //initializer);
+            addVariableToScope(node, getInitializer(contractValueContext, node, interpreterCallback)); //initializer);
         } else if (node instanceof ASTFunctionDefinition || node instanceof ASTModifierDefinition) {
             currentFunction = (FunctionScope)node;
 
@@ -187,7 +190,7 @@ public class Scope {
             ASTForStatement forStatement = (ASTForStatement)node;
             ASTNode initPart = forStatement.getInitPart();
             if (initPart instanceof ASTVariableDeclaration || initPart instanceof ASTVariableDeclarationStatement) {
-                addVariableToScope(initPart, getInitializer(initPart, interpreterCallback));
+                addVariableToScope(initPart, getInitializer(contractValueContext, initPart, interpreterCallback));
             }
         }
     }

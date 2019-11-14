@@ -24,6 +24,7 @@ package soltix.interpretation;
 import soltix.Configuration;
 import soltix.ast.*;
 import org.apache.log4j.Logger;
+import soltix.util.Util;
 
 import java.util.ArrayList;
 
@@ -300,7 +301,9 @@ public class ASTInterpreter {
         if (callbackObject.getNavigationPolicy() == NavigationPolicy.NAVIGATION_POLICY_DESCEND_ALL) {
             callbackObject.visitNodeBeforeProcessing(currentNode);
 
-            scope.enterNode(currentNode, null); // We do not record values here, so no initializer is given
+            if (true) Util.unimpl(); // ContextValue null below: not reviewed, probably broken
+
+            scope.enterNode(null /*TODO*/, currentNode, null); // We do not record values here, so no initializer is given
 
             // Depth-first child node traversal for all paths
             for (int i = 0; i < currentNode.getChildCount(); ++i) {

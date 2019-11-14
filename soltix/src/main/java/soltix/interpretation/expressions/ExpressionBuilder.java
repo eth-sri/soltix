@@ -22,6 +22,7 @@ package soltix.interpretation.expressions;
 
 import soltix.ast.*;
 import soltix.interpretation.Type;
+import soltix.interpretation.values.ContractValue;
 import soltix.interpretation.values.FunctionValue;
 import soltix.interpretation.values.Value;
 import soltix.interpretation.variables.Variable;
@@ -39,6 +40,14 @@ import java.util.ArrayList;
 public class ExpressionBuilder {
     public static Expression fromASTNode(AST ast,
                                          ASTContractDefinition contractDefinition,
+                                         // Contract instance, if any, within which we execute. This allows us to get a
+                                         // handle on the top-level contract VariableEnvironment for the purpose of
+                                         // function call interpretation. The VariableEnvironment passed below is not
+                                         // sufficient for this particular purpose because it gives the environment
+                                         // within the current call chain - potentially including current function
+                                         // parameters that are not available in a subsequent function call
+                                         ContractValue contractValueContext,
+                                         // VariableEnvironment within which we execute
                                          VariableEnvironment environment,
                                          ASTNode astNode) throws Exception {
         Expression result = null;
@@ -67,7 +76,7 @@ public class ExpressionBuilder {
                 if (arguments.size() != 1) {
                     throw new Exception("Unexpected elementary type name conversion argument count (not 1): " + arguments.size());
                 }
-                Expression toConvert = fromASTNode(ast, contractDefinition, environment, arguments.get(0));
+                Expression toConvert = fromASTNode(ast, contractDefinition, contractValueContext, environment, arguments.get(0));
                 result = new Expression(toConvert, elementaryTypeNameExpression.getElementaryTypeName()); // type conversion expression
             } else if (functionCall.getCalled() instanceof ASTMemberAccess
                 || functionCall.getCalled() instanceof ASTFunctionCall) { // TODO what about arrays?
@@ -78,13 +87,13 @@ public class ExpressionBuilder {
                 // TODO filter out the struct init case, handle like non-canonical structs below
 
                 // This must be a call to an expression of type function
-                Expression calledExpression = fromASTNode(ast, contractDefinition, environment, functionCall.getCalled());
+                Expression calledExpression = fromASTNode(ast, contractDefinition, contractValueContext, environment, functionCall.getCalled());
                 if (!(calledExpression.getType() instanceof ASTFunctionTypeName)) {
                     throw new Exception("Call to something that is not a function in " + functionCall.toSolidityCode()
                         + ", type is " + calledExpression.getType().toSolidityCode());
                 }
                 ASTFunctionTypeName functionTypeName = (ASTFunctionTypeName) calledExpression.getType();
-                ArrayList<Expression> arguments = functionCall.getExpressionArguments(contractDefinition, environment);
+                ArrayList<Expression> arguments = functionCall.getExpressionArguments(contractDefinition, contractValueContext, environment);
                 ASTNode returnType = functionTypeName.getReturnType();
                 result = new Expression(calledExpression, arguments, returnType);
             } else if (functionCall.getCalled() instanceof ASTIdentifier) {
@@ -115,18 +124,24 @@ public class ExpressionBuilder {
                                     " of type " + variable.getType().toSolidityCode());
                         }
 
+
+
                         // OK - continue below ...
                         FunctionValue value = (FunctionValue)environment.resolveVariableValueIncludingParentEnvironments(0, variable.getName());
+
                         functionDefinition = value.getFunctionDefinition();
                         returnType = functionDefinition.getReturnType();
-                        functionCall.setInterpretationFunctionDefinition(functionDefinition);
+                        functionCall.setInterpretationFunctionValue(value); //functionDefinition);
                     }
                 } else {
                     returnType = functionDefinition.getReturnType();
-                    functionCall.setInterpretationFunctionDefinition(functionDefinition);
+                    //functionCall.setInterpretationFunctionDefinition(functionDefinition);
+                    functionCall.setInterpretationFunctionValue(
+                            new FunctionValue(contractDefinition, functionDefinition, functionDefinition.getFunctionType(), contractValueContext)
+                    );
                 }
                 // Build Expression objects for all function arguments
-                ArrayList<Expression> arguments = functionCall.getExpressionArguments(contractDefinition, environment);
+                ArrayList<Expression> arguments = functionCall.getExpressionArguments(contractDefinition, contractValueContext, environment);
                 Expression callExpression = new Expression(functionCall, arguments, returnType);
                 result = callExpression;
             } else if (functionCall.getCalled() instanceof ASTNewExpression) {
@@ -141,7 +156,7 @@ public class ExpressionBuilder {
                     Util.unimpl();
                 }
 
-                ArrayList<Expression> arguments = functionCall.getExpressionArguments(contractDefinition, environment);
+                ArrayList<Expression> arguments = functionCall.getExpressionArguments(contractDefinition, contractValueContext, environment);
                 result = new Expression(contractTypeDefinition, arguments);
             } else {
                 throw new Exception("Function call to unsupported item " + functionCall.getCalled().getClass().getName());
@@ -149,18 +164,18 @@ public class ExpressionBuilder {
         } else if (astNode instanceof  ASTBinaryOperation) {
             ASTBinaryOperation binaryOperation = (ASTBinaryOperation)astNode;
             Expression binaryExpression = new Expression(
-                fromASTNode(ast, contractDefinition, environment, binaryOperation.getLeftOperand()),
+                fromASTNode(ast, contractDefinition, contractValueContext, environment, binaryOperation.getLeftOperand()),
                 binaryOperation.getOperator(),
-                fromASTNode(ast, contractDefinition, environment, binaryOperation.getRightOperand())
+                fromASTNode(ast, contractDefinition, contractValueContext, environment, binaryOperation.getRightOperand())
             );
             result = binaryExpression;
         } else if (astNode instanceof ASTConditional) {
             ASTConditional conditional = (ASTConditional) astNode;
 
             Expression conditionalExpression = new Expression(
-                    fromASTNode(ast, contractDefinition, environment, conditional.getCondition()),
-                    fromASTNode(ast, contractDefinition, environment, conditional.getTrueBranch()),
-                    fromASTNode(ast, contractDefinition, environment, conditional.getFalseBranch())
+                    fromASTNode(ast, contractDefinition, contractValueContext, environment, conditional.getCondition()),
+                    fromASTNode(ast, contractDefinition, contractValueContext, environment, conditional.getTrueBranch()),
+                    fromASTNode(ast, contractDefinition, contractValueContext, environment, conditional.getFalseBranch())
             );
             result = conditionalExpression;
         } else if (astNode instanceof ASTTupleExpression) {
@@ -172,18 +187,18 @@ public class ExpressionBuilder {
                 //     0     ==   (true? 0: 1)
                 //     ^ int      ^^^^^^^^^^^^ tuple expression giving int
                 // So we avoid modeling the tuple entirely and substitute it with the only element.
-                result = fromASTNode(ast, contractDefinition, environment, tupleExpression.getComponent(0));
+                result = fromASTNode(ast, contractDefinition, contractValueContext, environment, tupleExpression.getComponent(0));
             } else {
                 for (int i = 0; i < tupleExpression.getCount(); ++i) {
                     ASTNode component = tupleExpression.getComponent(i);
-                    tupleComponents.add(fromASTNode(ast, contractDefinition, environment, component));
+                    tupleComponents.add(fromASTNode(ast, contractDefinition, contractValueContext, environment, component));
                 }
                 result = new Expression(tupleComponents, tupleExpression);
             }
         } else if (astNode instanceof ASTAssignment) {
             ASTAssignment assignmentExpression = (ASTAssignment) astNode;
-            Expression lhsExpression = fromASTNode(ast, contractDefinition, environment, assignmentExpression.getLHS());
-            Expression rhsExpression = fromASTNode(ast, contractDefinition, environment, assignmentExpression.getRHS());
+            Expression lhsExpression = fromASTNode(ast, contractDefinition, contractValueContext, environment, assignmentExpression.getLHS());
+            Expression rhsExpression = fromASTNode(ast, contractDefinition, contractValueContext, environment, assignmentExpression.getRHS());
 
             // For now, we convert every compound assignment  x op y  to its non-compound form   x = x op y
             if (assignmentExpression.getOperator() != ASTAssignment.Operator.OP_ASSIGN) {
@@ -235,10 +250,10 @@ public class ExpressionBuilder {
         } else if (astNode instanceof ASTUnaryOperation) {
             ASTUnaryOperation unaryOperation = (ASTUnaryOperation) astNode;
             result = new Expression(unaryOperation.getOperator(),
-                    fromASTNode(ast, contractDefinition, environment, unaryOperation.getOperand()));
+                    fromASTNode(ast, contractDefinition, contractValueContext, environment, unaryOperation.getOperand()));
         } else if (astNode instanceof ASTMemberAccess) {
             ASTMemberAccess memberAccess = (ASTMemberAccess) astNode;
-            Expression appliedToExpression = fromASTNode(ast, contractDefinition, environment, memberAccess.getAppliedTo());
+            Expression appliedToExpression = fromASTNode(ast, contractDefinition, contractValueContext, environment, memberAccess.getAppliedTo());
 
             ASTStructDefinition structDefinition = Type.getStructType(ast, appliedToExpression.getType());
 

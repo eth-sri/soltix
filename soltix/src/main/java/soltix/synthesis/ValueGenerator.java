@@ -229,7 +229,7 @@ public class ValueGenerator {
         } else if (type instanceof ASTFunctionTypeName) {
             // Always return a null value for now.
             // TODO we could randomly choose - maybe even generate on-demand - a method of matching signature
-            return new FunctionValue(null, null, type);
+            return new FunctionValue(null, null, type, null);
         } else {
             throw new Exception("ValueGenerator.generateRandomValue called for unsupported type " + type.toSolidityCode());
         }

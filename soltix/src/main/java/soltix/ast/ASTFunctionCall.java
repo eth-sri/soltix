@@ -22,6 +22,8 @@ package soltix.ast;
 import soltix.Configuration;
 import soltix.interpretation.expressions.Expression;
 import soltix.interpretation.expressions.ExpressionBuilder;
+import soltix.interpretation.values.ContractValue;
+import soltix.interpretation.values.FunctionValue;
 import soltix.interpretation.values.Value;
 import soltix.interpretation.variables.VariableEnvironment;
 
@@ -54,11 +56,13 @@ public class ASTFunctionCall extends ASTNode {
     public ArrayList<ASTNode> getArguments() { return arguments; }
 
     // Convert the ASTNode representation of an expression to an Expression object
-    public ArrayList<Expression> getExpressionArguments(ASTContractDefinition contract, VariableEnvironment environment) throws Exception {
+    public ArrayList<Expression> getExpressionArguments(ASTContractDefinition contract,
+                                                        ContractValue contractValueContext,
+                                                        VariableEnvironment environment) throws Exception {
         if (expressionArguments == null) {
             expressionArguments = new ArrayList<Expression>();
             for (ASTNode argument : arguments) {
-                Expression expressionArgument = ExpressionBuilder.fromASTNode(ast, contract, environment, argument);
+                Expression expressionArgument = ExpressionBuilder.fromASTNode(ast, contract, contractValueContext, environment, argument);
                 expressionArguments.add(expressionArgument);
             }
         }
@@ -160,13 +164,20 @@ public class ASTFunctionCall extends ASTNode {
     }
 
     // Interpretation-related extra data: Argument values
-    public ASTFunctionDefinition getInterpretationFunctionDefinition() {
+    /*public ASTFunctionDefinition getInterpretationFunctionDefinition() {
         return interpretationFunctionDefinition;
     }
     public void setInterpretationFunctionDefinition(ASTFunctionDefinition interpretationFunctionDefinition) {
         this.interpretationFunctionDefinition = interpretationFunctionDefinition;
     }
-    private ASTFunctionDefinition interpretationFunctionDefinition;
+    private ASTFunctionDefinition interpretationFunctionDefinition;*/
+    public FunctionValue getInterpretationFunctionValue() {
+        return interpretationFunctionValue;
+    }
+    public void setInterpretationFunctionValue(FunctionValue value) {
+        interpretationFunctionValue = value;
+    }
+    private FunctionValue interpretationFunctionValue;
 
     public ASTStructDefinition getInterpretationStructDefinition() { return interpretationStructDefinition; }
     public void setInterpretationStructDefinition(ASTStructDefinition interpretationStructDefinition) {

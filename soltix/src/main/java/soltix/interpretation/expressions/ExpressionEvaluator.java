@@ -69,31 +69,16 @@ public class ExpressionEvaluator {
     public class ComputedValues {
         public ComputedValues(int valueCount) {
             values = new ArrayList<Value>();
-            updatedContractContext = new ArrayList<ContractValue>();
             for (int i = 0; i < valueCount; ++i) {
                 values.add(null);
-                updatedContractContext.add(null);
             }
 
         }
         public ComputedValues() {
             values = new ArrayList<Value>();
-            updatedContractContext = new ArrayList<ContractValue>();
         }
 
         public ArrayList<Value> values;
-        // If non-null: new contract/VariableEnvironment context that must be used when working with the
-	// computed value, e.g. in
-	//     c.f();
-	// "c.f" computes a function value which is not specifically bound to the contract instance "c",
-	// and the application of the "." operator produces an updated context that must be used when
-	// evaluating the function to ensure that c's variables can be resolved within f(). 
-	// TODO changing FunctionValue to hold the context is likely to be more appropriate than recording
-	// and passing it externally. However, in that case at least a distinction may need to be made between
-	// function values bound to containing instances and function value variables that might be bound
-	// to the context in which they are used - unclear.
-        public ArrayList<ContractValue> updatedContractContext;
-        // Where appropriate: Pass source expression info (e.g. variables) along with computation results
         public Expression sourceExpression = null;
     }
 
@@ -375,16 +360,10 @@ public class ExpressionEvaluator {
             ASTFunctionDefinition calledFunction = functionValue.getFunctionDefinition();
             calledFunction.setInterpretationArguments(arguments);
 
-            ContractValue oldContractValueContext = interpreter.currentContractValueContext;
-            if (values.updatedContractContext.size() > 0) {
-                interpreter.currentContractValueContext = values.updatedContractContext.get(0);
-            }
-
-            Value returnValue = interpreter.interpretNode(calledFunction);
+            Value returnValue = interpreter.interpretNode(functionValue.getContractValueContext(), calledFunction); // TODO can the context become null?
             resultValues = new ComputedValues();
             resultValues.values.add(returnValue); // TODO multi-value?
 
-            interpreter.currentContractValueContext = oldContractValueContext;
             if (returnValue == null) {
                 if (calledFunction.getReturnList() != null) {
                     throw new Exception("Null return value from interpretation");
@@ -426,11 +405,12 @@ public class ExpressionEvaluator {
                                                                                 VariableEnvironment.NO_VALUE_SET_SELECTED,
                                                                                 expression.getFunctionCallArguments());
 
-                    if (functionCall.getInterpretationFunctionDefinition() != null) {
-                        ASTFunctionDefinition calledFunction = functionCall.getInterpretationFunctionDefinition();
+                    if (functionCall.getInterpretationFunctionValue() != null) {
+                        ASTFunctionDefinition calledFunction = functionCall.getInterpretationFunctionValue().getFunctionDefinition();
                         calledFunction.setInterpretationArguments(arguments);
 
-                        Value returnValue = interpreter.interpretNode(calledFunction);
+                        Value returnValue = interpreter.interpretNode(functionCall.getInterpretationFunctionValue().getContractValueContext(), // TODO can this be null?
+                                                                      calledFunction);
                         resultValues = new ComputedValues();
                         resultValues.values.add(returnValue); // TODO multi-value?
 
@@ -692,7 +672,8 @@ public class ExpressionEvaluator {
                 FunctionValue originalValue = (FunctionValue)value;
                 FunctionValue convertedValue = new FunctionValue(originalValue.getContractDefinition(),
                                                                  originalValue.getFunctionDefinition(),
-                                                                 originalValue.getType());
+                                                                 originalValue.getType(),
+                                                                 originalValue.getContractValueContext());
                 result.values.add(convertedValue);
             } else {
                 throw new Exception("Unimplemented cast from " + sourceType.toSolidityCode() + " to " + targetType.toSolidityCode());
@@ -762,14 +743,15 @@ public class ExpressionEvaluator {
                 throw new Exception("Invalid member access to non-contract value");
             }
 
+            ContractValue contractValue = (ContractValue)value;
             if (memberItem instanceof ASTFunctionDefinition) {
                 ASTFunctionDefinition functionDefinition = (ASTFunctionDefinition)memberItem;
                 FunctionValue functionValue = new FunctionValue((ASTContractDefinition)value.getType(),
                                                                 (ASTFunctionDefinition)memberItem,
-                                                                functionDefinition.getFunctionType());
+                                                                functionDefinition.getFunctionType(),
+                                                                contractValue);
                 result.values.add(functionValue);
             } else if (memberItem instanceof ASTVariableDeclaration) {
-                ContractValue contractValue = (ContractValue)value;
                 VariableEnvironment contractEnvironment = contractValue.getInterpretationEnvironment(); // TODO may not always be set properly?
                 Variable variableValue = contractEnvironment.getVariable(memberItem.getName());
                 if (variableValue == null) {
@@ -780,7 +762,7 @@ public class ExpressionEvaluator {
                 Util.unimpl();
             }
 
-            result.updatedContractContext.add((ContractValue)value);
+            //result.updatedContractContext.add((ContractValue)value);
         }
         return result;
     }
