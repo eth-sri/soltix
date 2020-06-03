@@ -5,7 +5,7 @@
   "author": "Nils Weller",
   "license": "Apache 2.0",
   "dependencies": {
-    "ganache-cli": "6.4.2",
+    "ganache-cli": "6.9.1",
     "truffle": "5.0.12"
   }
 }
